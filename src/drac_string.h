@@ -578,11 +578,11 @@ reserve(String* s, s64 stringLength)
         return BOOL_FALSE;
     }
     
-    s64 newLength = pow_int(2, log2_int(s->capacity));
-    while(newLength < stringLength) 
-    {
-        newLength *= 2;
-    }
+    // find next power of 2 bigger than requested length
+    s64 newLength = 1;
+    s64 lg = s->capacity;
+    while(lg >>= 1) newLength *= 2;
+    while(newLength < stringLength) newLength *= 2;
     
     char* newBuf = (char*)PLATFORM_REALLOC(s->str, newLength);
     if (!newBuf)
@@ -816,7 +816,13 @@ append(String* s, f32 f, u32 precision)
     
     buf[temp_cursor++] = '.';
     
-    u64 float_print_portion = (u64)(float_portion * pow_int(10, precision));
+    s64 dec_multiplier = 1;
+    u32 temp_precision = precision;
+    while (temp_precision--) {
+        dec_multiplier *= ten;
+    }
+    
+    u64 float_print_portion = (u64)(float_portion * dec_multiplier);
     while (float_portion > f32_EPSILON && float_portion < 0.1f) {
         buf[temp_cursor++] = '0';
         float_portion *= ten;
@@ -882,7 +888,13 @@ append(String* s, f64 d, u32 precision)
     
     buf[temp_cursor++] = '.';
     
-    u64 float_print_portion = (u64)(double_portion * pow_int(10, precision));
+    s64 dec_multiplier = 1;
+    u32 temp_precision = precision;
+    while (temp_precision--) {
+        dec_multiplier *= ten;
+    }
+    
+    u64 float_print_portion = (u64)(double_portion * dec_multiplier);
     while (double_portion > f32_EPSILON && double_portion < 0.1)
     {
         buf[temp_cursor++] = '0';

@@ -2,7 +2,6 @@
 
 #include "platform.h"
 #include "drac_array.h"
-#include "drac_math.h"
 #include "drac_random.h"
 #include "drac_string.h"
 
@@ -373,6 +372,19 @@ extern "C" void
 mainCRTStartup()
 {
     //
+    // Setup a console for the current Process 
+    //
+    HWND console = GetConsoleWindow();
+    if (!console)
+    {
+        AllocConsole();
+        console = GetConsoleWindow();
+    }
+    
+    //GetConsoleMode(console, &mode);
+    SetConsoleMode(console, 0);
+    
+    //
     // Random init
     //
     LARGE_INTEGER qpc;
@@ -401,13 +413,19 @@ mainCRTStartup()
                                    OPEN_EXISTING,
                                    0, NULL);
     
-    if (!configFile)
+    if (INVALID_HANDLE_VALUE == configFile)
     {
         win32_print("Could not find 'bot.config', what the heck\n");
+        HANDLE in = GetStdHandle(STD_INPUT_HANDLE);
+        SetConsoleMode(in, 0);
+        WaitForSingleObject(in, INFINITE);
+        char buf[1];
+        DWORD count;
+        ReadConsole(in, buf, sizeof(buf), &count, NULL);
         goto Close;
     }
     
-    DWORD configFileSize = kilobytes(1);
+    DWORD configFileSize = kilobytes(2);
     //GetFileSize(configFile, &configFileSize);
     
     char* configBuffer = (char*)alloca(configFileSize + 1);
@@ -460,17 +478,6 @@ mainCRTStartup()
     }
     
     STACK_STRING(err, kilobytes(64));
-    
-    //
-    // Setup a console for the current Process 
-    //
-    HWND console = GetConsoleWindow();
-    if (!console)
-    {
-        AllocConsole();
-        console = GetConsoleWindow();
-    }
-    
     
     WSADATA wsaData;
     WORD wsaVersion = MAKEWORD(2, 2);

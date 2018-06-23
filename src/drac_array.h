@@ -2,7 +2,6 @@
 #define DRAC_ARRAY_H
 
 #include "platform.h"
-#include "drac_math.h"
 
 #define ARRAY_FUNCTION template<typename T> FUNCTION
 #define ARRAY_MIN_ALLOCATED 8
@@ -141,11 +140,11 @@ array_reserve(Array<T>* array, s32 countItems)
     if (array->capacity >= countItems) return BOOL_TRUE;
     if (!array->isDynamic) return BOOL_FALSE;
     
-    u64 newArrayLength = pow_int(2, log2_int(array->capacity));
-    while(newArrayLength < countItems)
-    {
-        newArrayLength *= 2;
-    }
+    // find next power of 2 bigger than requested count
+    s64 newArrayLength = 1;
+    s64 lg = array->capacity;
+    while(lg >>= 1) newArrayLength *= 2;
+    while(newArrayLength < countItems) newArrayLength *= 2;
     
     u64 itemsBytes = newArrayLength * sizeof(T);
     u64 objBytes = offset_of(Array<T>, items);
