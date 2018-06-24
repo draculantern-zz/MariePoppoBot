@@ -157,19 +157,20 @@ if (!(_expr)) { \
 #endif
 
 
-#define align2(val) (((val) + 1) & ~1)
-#define align4(val) (((val) + 3) & ~3)
-#define align8(val) (((val) + 7) & ~7)
-#define align16(val) (((val) + 15) & ~15)
-#define align32(val) (((val) + 31) & ~31)
-#define align64(val) (((val) + 63) & ~63)
-#define align128(val) (((val) + 127) & ~127)
-#define align256(val) (((val) + 255) & ~255)
-#define align512(val) (((val) + 511) & ~511)
-#define align1024(val) (((val) + 1023) & ~1023)
-#define align2048(val) (((val) + 2047) & ~2047)
-#define align4096(val) (((val) + 4095) & ~4095)
-#define alignN(val, alignment) (((val) + ((alignment)-1)) & ~((alignment)-1))
+#define align_2(val) (((val) + 1) & ~1)
+#define align_4(val) (((val) + 3) & ~3)
+#define align_8(val) (((val) + 7) & ~7)
+#define align_16(val) (((val) + 15) & ~15)
+#define align_32(val) (((val) + 31) & ~31)
+#define align_64(val) (((val) + 63) & ~63)
+#define align_128(val) (((val) + 127) & ~127)
+#define align_256(val) (((val) + 255) & ~255)
+#define align_512(val) (((val) + 511) & ~511)
+#define align_1024(val) (((val) + 1023) & ~1023)
+#define align_2048(val) (((val) + 2047) & ~2047)
+#define align_4096(val) (((val) + 4095) & ~4095)
+#define align_n(val, alignment) (((val) + ((alignment)-1)) & ~((alignment)-1))
+#define align_down_n(val, alignment) ((val) & ~((alignment)-1))
 
 #define abs(x) ( ((x) >= 0) ? (x) : (-(x)) )
 #define min(x, y) (((x) < (y)) ? (x) : (y))
@@ -178,7 +179,6 @@ if (!(_expr)) { \
 #define lerp(a, b, T) ((a) + ((T) * ((b) - (a))))
 
 #define memzero(data, numbytes) memset(data, 0, numbytes)
-
 
 
 #if !defined(PLATFORM_MALLOC) && !defined(PLATFORM_FREE) && !defined(PLATFORM_REALLOC)

@@ -632,7 +632,7 @@ free_string(String* s)
 FUNCTION String
 string_from_buffer(u64 bufferLength, void* buffer)
 {
-    char* alignedBuffer = (char*)align8((uptr)buffer);
+    char* alignedBuffer = (char*)align_8((uptr)buffer);
     assert((uptr)alignedBuffer > 0);
     
     s64 diff = abs((char*)buffer - alignedBuffer);

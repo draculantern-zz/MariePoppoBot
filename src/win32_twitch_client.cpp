@@ -24,14 +24,14 @@ FUNCTION void*
 win32_heap_alloc(u64 numbytes) 
 {
     if (!ProcessHeap) ProcessHeap = GetProcessHeap();
-    numbytes = align8(numbytes);
+    numbytes = align_8(numbytes);
     return HeapAlloc(ProcessHeap, HEAP_ZERO_MEMORY, numbytes);
 }
 
 FUNCTION void* 
 win32_heap_realloc(void* data, u64 numbytes) 
 {
-    numbytes = align8(numbytes);
+    numbytes = align_8(numbytes);
     
     void* firstTryRealloc =
         HeapReAlloc(ProcessHeap, 
