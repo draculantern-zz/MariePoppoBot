@@ -37,6 +37,21 @@ twitch_users_match(const TwitchUser& rhs, const TwitchUser& lhs)
     return rhs.id == lhs.id;
 }
 
+HIGHP_COMMAND_FUNCTION(highp_github)
+{
+    TwitchMessage response = {};
+    response.user = twitchCommand->user;
+    memcpy(response.channel, twitchCommand->channel, TWITCH_USER_NAME_BUFFER);
+    String githubresponse = string_from_buffer(TWITCH_MESSAGE_BUFFER, response.message);
+    
+    githubresponse << "/me If there is an issue with me, you can tell @draculantern; "
+        "If you have a feature request or a bug report, you can let everyone "
+        "know at https://github.com/draculantern/MariePoppoBot ulhuLove";
+    
+    response.messageLength = githubresponse.length;
+    client->SendTwitchMessage(&response);
+}
+
 HIGHP_COMMAND_FUNCTION(highp_open)
 {
     TwitchMessage response = {};
@@ -360,6 +375,41 @@ HIGHP_COMMAND_FUNCTION(highp_queue)
     }
     
     response.messageLength = queuetext.length;
+    client->SendTwitchMessage(&response);
+}
+
+HIGHP_COMMAND_FUNCTION(highp_remove)
+{
+    if (OJ_GAME_NOT_STARTED == OjGameState) return;
+    if (!twitchCommand->cmdMessage[0]) return;
+    
+    TwitchMessage response;
+    response.user = twitchCommand->user;
+    memcpy(response.channel, twitchCommand->channel, TWITCH_USER_NAME_BUFFER);
+    String removetext = string_from_buffer(TWITCH_MESSAGE_BUFFER, response.message);
+    
+    bool32 foundUser = BOOL_FALSE;
+    for_array(OjQueue)
+    {
+        if (contains_ignore_case(twitchCommand->cmdMessage, it->displayName))
+        {
+            array_remove_index_ordered(&OjQueue, it.index);
+            foundUser = BOOL_TRUE;
+            break;
+        }
+    }
+    
+    if (foundUser)
+    {
+        removetext << "/me " << twitchCommand->cmdMessage
+            << " has been removed from the queue ulhuSlap";
+    }
+    else
+    {
+        removetext << "/me That person is not in the queue! ulhuS";
+    }
+    
+    response.messageLength = removetext.length;
     client->SendTwitchMessage(&response);
 }
 

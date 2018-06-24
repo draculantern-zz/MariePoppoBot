@@ -1419,23 +1419,23 @@ match_nbytes(const char* a, const char* b, s32 nbytes)
 {
     s32 bytesPerCompare = 1;
 #ifdef DRAC_SSE2
-    if (nbytes >= 16 && ((size_t)a % 16) == ((size_t)b % 16))
+    if (nbytes >= 16 && ((uptr)a % 16) == ((uptr)b % 16))
     {
         bytesPerCompare = 16;
     }
     else
 #endif
-        if (nbytes >= 8 && ((size_t)a % 8) == ((size_t)b % 8))
+        if (nbytes >= 8 && ((uptr)a % 8) == ((uptr)b % 8))
     {
         bytesPerCompare = 8;
     }
-    else if (nbytes >= 4 && ((size_t)a % 4) == ((size_t)b % 4))
+    else if (nbytes >= 4 && ((uptr)a % 4) == ((uptr)b % 4))
     {
         bytesPerCompare = 4;
     }
     
     size_t extraFront = (1 == bytesPerCompare) ? 
-        nbytes : ((size_t)a) % bytesPerCompare;
+        nbytes : ((uptr)a) % bytesPerCompare;
     size_t sseCount = (nbytes - extraFront) / bytesPerCompare;
     size_t extraBack = nbytes - (sseCount * bytesPerCompare) - extraFront;
     
@@ -1609,7 +1609,7 @@ find(const char* s, char c)
 FUNCTION s32
 find_in_nbytes(const char* s, s32 seekLen, const char* thing, s32 thingLen)
 {
-    for(s32 i = 0; i < seekLen - thingLen; ++i)
+    for(s32 i = 0; i < seekLen - thingLen + 1; ++i)
     {
         if (match_nbytes(s + i, thing, thingLen)) return i;
     }
@@ -1619,7 +1619,7 @@ find_in_nbytes(const char* s, s32 seekLen, const char* thing, s32 thingLen)
 FUNCTION s32        
 find_in_nbytes_ignore_case(const char* s, s32 seekLen, const char* thing, s32 thingLen)
 {
-    for(s32 i = 0; i < seekLen - thingLen; ++i)
+    for(s32 i = 0; i < seekLen - thingLen + 1; ++i)
     {
         if (match_nbytes_ignore_case(s + i, thing, thingLen)) return i;
     }

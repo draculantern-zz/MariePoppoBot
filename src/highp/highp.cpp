@@ -28,6 +28,7 @@ struct HighpCommandMap
 #define HIGHP_COMMAND_MAP(cmdName, fnName) {cmdName, &fnName}
 HighpCommandMap HighpCommandList[]
 {
+    HIGHP_COMMAND_MAP("github", highp_github),
     HIGHP_COMMAND_MAP("open", highp_open),
     HIGHP_COMMAND_MAP("play", highp_play),
     HIGHP_COMMAND_MAP("d4", highp_d4),
@@ -35,6 +36,7 @@ HighpCommandMap HighpCommandList[]
     HIGHP_COMMAND_MAP("winner", highp_winner),
     HIGHP_COMMAND_MAP("nextround", highp_nextround),
     HIGHP_COMMAND_MAP("queue", highp_queue),
+    HIGHP_COMMAND_MAP("remove", highp_remove)
 };
 
 RECEIVE_TWITCH_MESSAGE_CALLBACK(highp_receive_message)
