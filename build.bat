@@ -41,7 +41,10 @@ echo %StartTime%
 echo.
 echo ... BUILDING %ExeName% ...
 
-call vcvarsall x64 > nul
+IF "%VCINSTALLDIR%"=="" (
+    call vcvarsall x64 > nul
+)
+
 @echo on
 cl %CompilerFlags% ..\src\win32_msvc.c ..\src\win32_twitch_client.cpp ^
 /Fe%ExeName% /link %LinkFlags%
