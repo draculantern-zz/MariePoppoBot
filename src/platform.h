@@ -81,8 +81,8 @@ typedef intptr_t    iptr;
 #define gigabytes(n) ((n) * (1uLL<<30))
 
 #define assert_power_of_2(_integer) assert(((_integer) & ((_integer) - 1)) == 0)
-#define ARRAY_LENGTH(array_literal) sizeof(array_literal) / sizeof(array_literal[0])
-#define offset_of(_struct,_member) ((u64)&(((_struct*)0)->_member))
+#define ARRAY_LENGTH(array_literal) sizeof(array_literal) / sizeof((array_literal)[0])
+#define offset_of(_struct,_member) ((uptr)&(((_struct*)0)->_member))
 #define alignment_of_struct(_struct) alignof(_struct)
 
 #define swap_bitwise(a, b) \
@@ -125,8 +125,8 @@ for (auto it = str_;  \
 
 #define CRASH *(volatile int*)0 = 0
 #define NOT_IMPLEMENTED assert(!"function not implemented!")
-#define CONST_LITERAL_TO_STRING(x) #x
-#define TO_STRING(x) CONST_LITERAL_TO_STRING(x)
+#define _CONST_LITERAL_TO_STRING(x) #x
+#define TO_STRING(x) _CONST_LITERAL_TO_STRING(x)
 #define HAS_BITMASK(flags, bits) (((flags) | (bits)) == (flags))
 #define PFN(fn) PFN_##fn
 
