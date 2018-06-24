@@ -5,8 +5,9 @@
 #include "drac_random.h"
 #include "drac_string.h"
 
-#include "highp/highp.cpp"
 #include "drac_random.cpp"
+#include "twitch.cpp"
+#include "highp/highp.cpp"
 
 
 #define RECEIVE_BUFFER_LENGTH (megabytes(1))
@@ -82,7 +83,7 @@ win32_try_connect_twitch(Win32TwitchClient* client)
         string_clear(&err);
         err << "getaddrinfo failed for " << client->url << client->port << "\n";
         win32_print(err.str);
-        goto ConnectError;
+        return -1;
     }
     
     // test if we can connect to any of the potential address infos
@@ -100,7 +101,7 @@ win32_try_connect_twitch(Win32TwitchClient* client)
             string_clear(&err);
             err << "socket failed with error: " << WSAGetLastError();
             win32_print(err.str);
-            goto ConnectError;
+            return -1;
         }
         
         // try to connect with socket
@@ -124,18 +125,19 @@ win32_try_connect_twitch(Win32TwitchClient* client)
         string_clear(&err);
         err << "socket failed with error: " << WSAGetLastError();
         win32_print(err.str);
-        goto ConnectError;
+        return -1;
     }
     
     
     // login
-    String sendString = allocate_string();
-    sendString << "PASS " << client->pass << "\n";
+    String sendString = allocate_string(); 
+    defer { free_string(&sendString); };
+    twitch_format_pass_message(client->pass, &sendString);
     
     int passResult =send(client->ircSocket, sendString.str, (int)sendString.length, 0);
     
     string_clear(&sendString);
-    sendString << "NICK " << client->nick << "\n";
+    twitch_format_nick_message(client->nick, &sendString);
     
     int nickResult = send(client->ircSocket, sendString.str, (int)sendString.length, 0);
     
@@ -145,12 +147,11 @@ win32_try_connect_twitch(Win32TwitchClient* client)
         err << "Unable to login to twitch on account ("
             << client->nick << ")\n failed with error code:" << WSAGetLastError();
         win32_print(err.str);
-        goto ConnectError;
+        return -1;
     }
     
-    
     string_clear(&sendString);
-    sendString << "JOIN #" << client->channel << "\n";
+    twitch_format_join_message(client->channel, &sendString);
     
     int joinResult = send(client->ircSocket, sendString.str, (int)sendString.length, 0);
     
@@ -160,20 +161,16 @@ win32_try_connect_twitch(Win32TwitchClient* client)
         err << "Unable to connect to twitch channel ("
             << client->channel << ")\n failed with error code:" << WSAGetLastError();
         win32_print(err.str);
-        goto ConnectError;
+        return -1;
     }
     
     return 0;
-    
-    ConnectError:
-    return -1;
 }
 
-SEND_TWITCH_MESSAGE_CALLBACK(win32_send_message)
+FUNCTION void 
+win32_twitch_wait()
 {
-    LOCAL_STATIC s64 lastPerfCounter = 0;
     LOCAL_STATIC s64 perfFrequency = 0;
-    
     if (!perfFrequency)
     {
         LARGE_INTEGER freqLargeInt;
@@ -181,27 +178,40 @@ SEND_TWITCH_MESSAGE_CALLBACK(win32_send_message)
         perfFrequency = freqLargeInt.QuadPart;
     }
     
-    Win32TwitchClient* win32Client = (Win32TwitchClient*)client->reserved;
-    
-    STACK_STRING(formattedMessage, 256 + twitchMessage->messageLength);
-    
-    formattedMessage << "PRIVMSG #" << twitchMessage->channel
-        << " :" << twitchMessage->message << "\r\n";
-    
-    
     LARGE_INTEGER counterLargeInt;
     QueryPerformanceCounter(&counterLargeInt);
     s64 crntPerfCounter = counterLargeInt.QuadPart;
     
-    s64 diffTicks = crntPerfCounter - lastPerfCounter;
-    f64 diffMs = 1000.0 * (f64)diffTicks / perfFrequency;
-    lastPerfCounter = crntPerfCounter;
+    f64 seconds = (f64)crntPerfCounter / perfFrequency;
     
-    // 300 bc mods can send 100 msgs in 30s to twitch w/o being global'd
-    if (diffMs < 300.0)
+    twitch_wait_to_not_get_banned(seconds);
+}
+
+
+SEND_TWITCH_TEXT_CALLBACK(win32_send_text)
+{
+    win32_twitch_wait();
+    Win32TwitchClient* win32Client = (Win32TwitchClient*)client->reserved;
+    s32 result = send(win32Client->ircSocket, 
+                      text, 
+                      (int)textLength,
+                      win32Client->sendFlags);
+    
+    if (SOCKET_ERROR == result)
     {
-        Sleep((s32)(300.0 - diffMs) + 1);
+        return IRC_SOCKET_ERROR;
     }
+    return TWITCH_SUCCESS;
+}
+
+SEND_TWITCH_MESSAGE_CALLBACK(win32_send_message)
+{
+    win32_twitch_wait();
+    Win32TwitchClient* win32Client = (Win32TwitchClient*)client->reserved;
+    
+    STACK_STRING(formattedMessage, 256 + twitchMessage->messageLength);
+    
+    twitch_format_channel_message(twitchMessage, &formattedMessage);
     
     s32 result = send(win32Client->ircSocket, 
                       formattedMessage.str, 
@@ -213,159 +223,6 @@ SEND_TWITCH_MESSAGE_CALLBACK(win32_send_message)
         return IRC_SOCKET_ERROR;
     }
     return TWITCH_SUCCESS;
-}
-
-FUNCTION void
-win32_dispatch_twitch_callbacks(const Win32TwitchClient* win32Client, 
-                                const char* twitchMsg, 
-                                u32 twitchMsgLength)
-{
-    LOCAL_STATIC char parsedMsg[RECEIVE_BUFFER_LENGTH];
-    
-    // please i hope twitch never gives us this many lol, otherwise we'll drop messages
-    LOCAL_STATIC const s32 maxReceivedMsgs = 1024;
-    LOCAL_STATIC char* receivedMsgs[maxReceivedMsgs];
-    s32 receivedMsgsCount = 0;
-    
-    {
-        memcpy(parsedMsg, twitchMsg, twitchMsgLength);
-        StringReader msgReader = make_string_reader(twitchMsg, twitchMsgLength);
-        auto crntTwitchMsgStart = 0;
-        
-        do
-        {
-            auto nextTwitchMsgStart = seek_next_line(&msgReader, NEWLINE_CR_LF);
-            parsedMsg[nextTwitchMsgStart - 2] = 0;
-            receivedMsgs[receivedMsgsCount] = parsedMsg + crntTwitchMsgStart;
-            ++receivedMsgsCount;
-            crntTwitchMsgStart = msgReader.cursor;
-        } while(receivedMsgsCount < maxReceivedMsgs && valid_index(&msgReader, msgReader.cursor));
-    }
-    
-    for(auto i = 0; i < receivedMsgsCount; ++i)
-    {
-        bool32 msgHandled = BOOL_FALSE;
-        char* msg = receivedMsgs[i];
-        StringReader msgReader = make_string_reader(msg);
-        
-        if (match("PING :tmi.twitch.tv", msg))
-        {
-            msgHandled = BOOL_TRUE;
-            const char* pong = "PONG :tmi.twitch.tv\r\n";
-            int pongResult = send(win32Client->ircSocket, 
-                                  pong, (int)strlen(pong), 
-                                  win32Client->sendFlags);
-            if (SOCKET_ERROR == pongResult)
-            {
-                win32_print("Received PING, but failed to PONG\n");
-            }
-        }
-        else if (contains(msg, "PRIVMSG"))
-        {
-            msgHandled = BOOL_TRUE;
-            
-            // Read twitch tags
-            TwitchUser user = {};
-            
-            {
-                msgReader.cursor = 0;
-                seek_next_string(&msgReader, "broadcaster/");
-                if (next_char(&msgReader) == '1')
-                {
-                    user.channelBroadcaster = BOOL_TRUE;
-                    user.channelModerator = BOOL_TRUE;
-                }
-                
-                msgReader.cursor = 0;
-                seek_next_string(&msgReader, "mod=");
-                if (next_char(&msgReader) == '1')
-                {
-                    user.channelModerator = BOOL_TRUE;
-                }
-                
-                msgReader.cursor = 0;
-                seek_next_string(&msgReader, "subscriber=");
-                if (next_char(&msgReader) == '1')
-                {
-                    user.channelSubscriber = BOOL_TRUE;
-                }
-                
-                msgReader.cursor = 0;
-                seek_next_string(&msgReader, "user-id=");
-                s32 userIdStart = msgReader.cursor;
-                user.id = parse_u64(msg + userIdStart);
-                
-                msgReader.cursor = 0;
-                seek_next_string(&msgReader, "display-name=");
-                s32 displayNameStart = seek_next_alphanumeric(&msgReader);
-                s32 displayNameEnd   = seek_next_char(&msgReader, ';');
-                memcpy(user.displayName,
-                       msg + displayNameStart, 
-                       min(displayNameEnd - displayNameStart, TWITCH_USER_NAME_LENGTH));
-            }
-            
-            seek_next_string(&msgReader, "PRIVMSG");
-            
-            seek_next_char(&msgReader, '#');
-            s32 channelStart = seek_next_alphanumeric(&msgReader);
-            s32 channelEnd = seek_next_non_alphanumeric(&msgReader);
-            
-            seek_next_char(&msgReader, ':');
-            s32 chatStart = seek_past_whitespace(&msgReader);
-            s32 chatEnd = seek_next_char(&msgReader, 0);
-            
-            if (msg[chatStart] == win32Client->twitchClient.cmdDesignator &&
-                !char_is_whitespace(msg[chatStart + 1]))
-            {
-                msgReader.cursor = chatStart + 1;
-                s32 cmdStart = chatStart + 1;
-                s32 cmdEnd = seek_next_whitespace(&msgReader);
-                chatStart = min(chatEnd, cmdEnd + 1);
-                
-                TwitchCommand twitchCommand = {};
-                twitchCommand.user = user;
-                twitchCommand.messageLength = chatEnd - chatStart; // + 1? 
-                
-                memcpy(twitchCommand.channel, 
-                       msg + channelStart,
-                       min(channelEnd - channelStart, TWITCH_USER_NAME_BUFFER - 1));
-                memcpy(twitchCommand.cmd, 
-                       msg + cmdStart,
-                       min(cmdEnd - channelStart, TWITCH_CMD_BUFFER - 1));
-                memcpy(twitchCommand.cmdMessage, 
-                       msg + chatStart,
-                       min(chatEnd - chatStart, TWITCH_MESSAGE_BUFFER - 1));
-                
-                win32Client->twitchClient.ReceiveTwitchCommand(&win32Client->twitchClient,
-                                                               &twitchCommand);
-            }
-            else
-            {
-                TwitchMessage twitchMessage = {};
-                twitchMessage.user = user;
-                twitchMessage.messageLength = chatEnd - chatStart;
-                
-                memcpy(twitchMessage.channel, 
-                       msg + channelStart,
-                       min(channelEnd - channelStart, TWITCH_USER_NAME_BUFFER - 1));
-                memcpy(twitchMessage.message, 
-                       msg + chatStart,
-                       min(chatEnd - chatStart, TWITCH_MESSAGE_BUFFER - 1));
-                
-                win32Client->twitchClient.ReceiveTwitchMessage(&win32Client->twitchClient,
-                                                               &twitchMessage);
-            }
-        }
-        
-        if (!msgHandled)
-        {
-            STACK_STRING(print, kilobytes(1));
-            print << msg << "\n";
-            win32_print(print.str);
-        }
-    }
-    
-    memzero(parsedMsg, twitchMsgLength);
 }
 
 extern "C" void 
@@ -381,7 +238,6 @@ mainCRTStartup()
         console = GetConsoleWindow();
     }
     
-    //GetConsoleMode(console, &mode);
     SetConsoleMode(console, 0);
     
     //
@@ -422,13 +278,16 @@ mainCRTStartup()
         char buf[1];
         DWORD count;
         ReadConsole(in, buf, sizeof(buf), &count, NULL);
-        goto Close;
+        ExitProcess(1);
     }
     
-    DWORD configFileSize = kilobytes(2);
-    //GetFileSize(configFile, &configFileSize);
+    DWORD configFileSize = GetFileSize(configFile, NULL);
+    char* configBuffer = (char*)VirtualAlloc(0, 
+                                             configFileSize, 
+                                             MEM_COMMIT | MEM_RESERVE,
+                                             PAGE_READWRITE);
+    defer {  VirtualFree(configBuffer, 0, MEM_DECOMMIT | MEM_RELEASE); };
     
-    char* configBuffer = (char*)alloca(configFileSize + 1);
     configBuffer[configFileSize] = 0;
     DWORD countBytesIn;
     ReadFile(configFile, configBuffer, configFileSize, &countBytesIn, NULL);
@@ -504,10 +363,13 @@ mainCRTStartup()
     Client.twitchClient.reserved = &Client;
     Client.twitchClient.cmdDesignator = '!';
     
-    // yuck... but had to do it to allow SendTwitchMessage to be const 
-    PFN(SendTwitchMessage)* sendCbck = 
-        (PFN(SendTwitchMessage)*)&Client.twitchClient.SendTwitchMessage;
-    *sendCbck = &win32_send_message;
+    twitch_client_set_callback(Client.twitchClient,
+                               SendTwitchMessage,
+                               &win32_send_message);
+    
+    twitch_client_set_callback(Client.twitchClient,
+                               SendText,
+                               &win32_send_text);
     
     init_client(&Client.twitchClient);
     
@@ -539,18 +401,16 @@ mainCRTStartup()
     {
         string_clear(&err);
         
-        // @TODO use select() for timeout checks???
-        //       this might be a bad idea bc we don't receive anything but PING
-        //       for chats with no one active
         int nbytes = recv(Client.ircSocket, 
                           receiveBuffer,
                           RECEIVE_BUFFER_LENGTH - 1,
                           recvFlags);
         
+        // msdn.microsoft.com/en-us/library/windows/desktop/ms740121(v=vs.85).aspx
         if (0 < nbytes)
         {
             receiveBuffer[nbytes] = 0;
-            win32_dispatch_twitch_callbacks(&Client, receiveBuffer, nbytes);
+            twitch_dispatch_callbacks(&Client.twitchClient, receiveBuffer, nbytes);
         }
         else if (0 == recvFlags)
         {

@@ -2,6 +2,7 @@
 #define TWITCH_H
 
 #include "platform.h"
+#include "drac_string.h"
 
 struct TwitchClient;
 struct TwitchCommand;
@@ -35,6 +36,14 @@ const TwitchMessage* twitchMessage)
 typedef TwitchErrorCode (*PFN(SendTwitchMessage))(const TwitchClient* client,
                                                   const TwitchMessage* twitchMessage);
 
+#define SEND_TWITCH_TEXT_CALLBACK(fnName) \
+FUNCTION TwitchErrorCode fnName(const TwitchClient* client, \
+const char* text, \
+s32 textLength)
+typedef TwitchErrorCode (*PFN(SendText))(const TwitchClient* client,
+                                         const char* text, 
+                                         s32 textLength);
+
 #define TWITCH_MESSAGE_MAX_LENGTH 500
 #define TWITCH_MESSAGE_BUFFER 512
 #define TWITCH_USER_NAME_LENGTH 20
@@ -67,15 +76,56 @@ struct TwitchCommand
     s32 messageLength;
 };
 
-#define DECLARE_TWITCH_CALLBACK(fn) PFN(fn) fn
+
+#define TWITCH_CALLBACK_NAME(fn) _##fn
+#define DECLARE_TWITCH_CALLBACK(fn) PFN(fn) TWITCH_CALLBACK_NAME(fn)
+
+#define TWITCH_CLIENT_DISPATCH(fn, ...) \
+TWITCH_CALLBACK_NAME(fn) (this, __VA_ARGS__);
+
 struct TwitchClient
 {
     DECLARE_TWITCH_CALLBACK(ReceiveTwitchMessage);
     DECLARE_TWITCH_CALLBACK(ReceiveTwitchCommand);
-    const DECLARE_TWITCH_CALLBACK(SendTwitchMessage);
+    DECLARE_TWITCH_CALLBACK(SendTwitchMessage);
+    DECLARE_TWITCH_CALLBACK(SendText);
     char cmdDesignator;
     TwitchPlatformData* reserved;
+    
+    FORCE_INLINE void 
+        ReceiveTwitchMessage(const TwitchMessage* twitchMessage) const
+    {
+        TWITCH_CLIENT_DISPATCH(ReceiveTwitchMessage, twitchMessage);
+    }
+    FORCE_INLINE void 
+        ReceiveTwitchCommand(const TwitchCommand* twitchCommand) const
+    {
+        TWITCH_CLIENT_DISPATCH(ReceiveTwitchCommand, twitchCommand);
+    }
+    FORCE_INLINE TwitchErrorCode 
+        SendTwitchMessage(const TwitchMessage* twitchMessage) const
+    {
+        return TWITCH_CLIENT_DISPATCH(SendTwitchMessage, twitchMessage);
+    }
+    FORCE_INLINE TwitchErrorCode
+        SendText(const char* text, s32 textLength) const
+    {
+        return TWITCH_CLIENT_DISPATCH(SendText, text, textLength);
+    }
 };
 
+#define twitch_client_set_callback(client, cbk, pfn) \
+(client). TWITCH_CALLBACK_NAME(cbk) = pfn
+
+FUNCTION void twitch_wait_to_not_get_banned(f64 wallClockInSeconds);
+FUNCTION void twitch_format_pass_message(const char* pass, String* inout);
+FUNCTION void twitch_format_nick_message(const char* nick, String* inout);
+FUNCTION void twitch_format_join_message(const char* channel, String* inout);
+FUNCTION void twitch_format_part_message(const char* channel, String* inout);
+FUNCTION void twitch_format_channel_message(const TwitchMessage* twitchMessage,
+                                            String* inout);
+FUNCTION void twitch_dispatch_callbacks(const TwitchClient* client, 
+                                        const char* twitchText, 
+                                        u32 twitchTextLength);
 
 #endif /* TWITCH_H */

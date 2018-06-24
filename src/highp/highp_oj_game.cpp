@@ -41,7 +41,8 @@ HIGHP_COMMAND_FUNCTION(highp_open)
 {
     TwitchMessage response = {};
     response.user = twitchCommand->user;
-    memcpy(response.channel, twitchCommand->channel, TWITCH_USER_NAME_BUFFER);String openresponse = string_from_buffer(TWITCH_MESSAGE_BUFFER, response.message);
+    memcpy(response.channel, twitchCommand->channel, TWITCH_USER_NAME_BUFFER);
+    String openresponse = string_from_buffer(TWITCH_MESSAGE_BUFFER, response.message);
     
     if (twitchCommand->user.channelBroadcaster || 
         twitchCommand->user.channelModerator)
@@ -51,7 +52,7 @@ HIGHP_COMMAND_FUNCTION(highp_open)
         openresponse << "/me The queue is open, type !play to enter";
         
         response.messageLength = openresponse.length;
-        client->SendTwitchMessage(client, &response);
+        client->SendTwitchMessage(&response);
     }
 }
 
@@ -94,7 +95,7 @@ HIGHP_COMMAND_FUNCTION(highp_play)
     }
     
     response.messageLength = playresponse.length;
-    client->SendTwitchMessage(client, &response);
+    client->SendTwitchMessage(&response);
 }
 
 HIGHP_COMMAND_FUNCTION(highp_d4)
@@ -172,7 +173,7 @@ HIGHP_COMMAND_FUNCTION(highp_d4)
     HighpD4Response:
     
     response.messageLength = d4response.length;
-    client->SendTwitchMessage(client, &response);
+    client->SendTwitchMessage(&response);
 }
 
 
@@ -240,7 +241,7 @@ HIGHP_COMMAND_FUNCTION(highp_teams)
     HighpTeamsMessage:
     
     response.messageLength = teamsresponse.length;
-    client->SendTwitchMessage(client, &response);
+    client->SendTwitchMessage(&response);
 }
 
 HIGHP_COMMAND_FUNCTION(highp_winner)
@@ -258,7 +259,7 @@ HIGHP_COMMAND_FUNCTION(highp_winner)
     {
         winnertext << "/me You need to give me a proper team # you baka.";
         response.messageLength = winnertext.length;
-        client->SendTwitchMessage(client, &response);
+        client->SendTwitchMessage(&response);
         return;
     }
     
@@ -266,7 +267,7 @@ HIGHP_COMMAND_FUNCTION(highp_winner)
     {
         winnertext << "/me !payout " << TeamLeaders[winnerIndex] << " 1000";
         response.messageLength = winnertext.length;
-        client->SendTwitchMessage(client, &response);
+        client->SendTwitchMessage(&response);
     }
     
     string_clear(&TeamLeaders[0]);
@@ -289,7 +290,7 @@ HIGHP_COMMAND_FUNCTION(highp_winner)
             winnertext << "/me !payout " 
                 << it->user.displayName << " " << (1000 / winnerCount);
             response.messageLength = winnertext.length;
-            client->SendTwitchMessage(client, &response);
+            client->SendTwitchMessage(&response);
         }
         it->team = 0;
     }
@@ -312,7 +313,7 @@ HIGHP_COMMAND_FUNCTION(highp_winner)
     OjGameState = OJ_GAME_INTERMISSION;
     
     response.messageLength = winnertext.length;
-    client->SendTwitchMessage(client, &response);
+    client->SendTwitchMessage(&response);
 }
 
 HIGHP_COMMAND_FUNCTION(highp_nextround)
@@ -332,7 +333,7 @@ HIGHP_COMMAND_FUNCTION(highp_nextround)
         " Could a mod please set the !teams";
     
     response.messageLength = newroundtext.length;
-    client->SendTwitchMessage(client, &response);
+    client->SendTwitchMessage(&response);
 }
 
 HIGHP_COMMAND_FUNCTION(highp_queue)
@@ -359,7 +360,7 @@ HIGHP_COMMAND_FUNCTION(highp_queue)
     }
     
     response.messageLength = queuetext.length;
-    client->SendTwitchMessage(client, &response);
+    client->SendTwitchMessage(&response);
 }
 
 #endif /* HIGHP_OJ_GAME_CPP  */

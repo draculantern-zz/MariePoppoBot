@@ -74,10 +74,9 @@ RECEIVE_TWITCH_COMMAND_CALLBACK(highp_receive_command)
 extern "C" void
 init_client(TwitchClient* out)
 {
-    // @UPDATE
     out->cmdDesignator = '!';
-    out->ReceiveTwitchMessage = &highp_receive_message;
-    out->ReceiveTwitchCommand = &highp_receive_command;
+    twitch_client_set_callback(*out, ReceiveTwitchMessage, &highp_receive_message);
+    twitch_client_set_callback(*out, ReceiveTwitchCommand, &highp_receive_command);
     
     {
         for(String* teamString = TeamLeaders;
