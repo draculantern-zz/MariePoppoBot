@@ -49,23 +49,21 @@ twitch_users_match(const TwitchUser& rhs, const TwitchUser& lhs)
 
 FUNCTION HIGHP_COMMAND_FUNCTION(highp_commands)
 {
-    if (!twitchCommand->user.channelModerator ||
-        !twitchCommand->user.channelBroadcaster)
+    if (twitchCommand->user.channelModerator ||
+        twitchCommand->user.channelBroadcaster)
     {
-        return;
+        TwitchMessage* response = push<TwitchMessage>(Oj.memory);
+        response->user = twitchCommand->user;
+        memcpy(response->channel, twitchCommand->channel, TWITCH_USER_NAME_BUFFER);
+        String commandsresponse = string_from_buffer(response->message, TWITCH_MESSAGE_BUFFER);
+        
+        commandsresponse <<
+            "/me Commands list: !open !play !d4 !teams !nextround !winner "
+            "!queue !remove !github !commands";
+        
+        response->messageLength = commandsresponse.length;
+        client->SendTwitchMessage(response);
     }
-    
-    TwitchMessage* response = push<TwitchMessage>(Oj.memory);
-    response->user = twitchCommand->user;
-    memcpy(response->channel, twitchCommand->channel, TWITCH_USER_NAME_BUFFER);
-    String commandsresponse = string_from_buffer(response->message, TWITCH_MESSAGE_BUFFER);
-    
-    commandsresponse <<
-        "/me Commands list: !open !play !d4 !teams !nextround !winner "
-        "!queue !remove !github !commands";
-    
-    response->messageLength = commandsresponse.length;
-    client->SendTwitchMessage(response);
 }
 
 FUNCTION HIGHP_COMMAND_FUNCTION(highp_github)
