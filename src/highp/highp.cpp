@@ -25,6 +25,7 @@ struct HighpCommandMap
 #define HIGHP_COMMAND_MAP(cmdName, fnName) {cmdName, &fnName}
 HighpCommandMap HighpCommandList[]
 {
+    HIGHP_COMMAND_MAP("commands", highp_commands),
     HIGHP_COMMAND_MAP("github", highp_github),
     HIGHP_COMMAND_MAP("open", highp_open),
     HIGHP_COMMAND_MAP("play", highp_play),
@@ -36,8 +37,7 @@ HighpCommandMap HighpCommandList[]
     HIGHP_COMMAND_MAP("remove", highp_remove)
 };
 
-FUNCTION
-RECEIVE_TWITCH_MESSAGE_CALLBACK(highp_receive_message)
+FUNCTION RECEIVE_TWITCH_MESSAGE_CALLBACK(highp_receive_message)
 {
     STACK_STRING(format, kilobytes(1));
     format 
@@ -46,8 +46,7 @@ RECEIVE_TWITCH_MESSAGE_CALLBACK(highp_receive_message)
     PLATFORM_LOG(format.str);
 }
 
-FUNCTION 
-RECEIVE_TWITCH_COMMAND_CALLBACK(highp_receive_command)
+FUNCTION RECEIVE_TWITCH_COMMAND_CALLBACK(highp_receive_command)
 {
     begin_temp_stack(Oj.memory);
     defer { end_temp_stack(Oj.memory); };

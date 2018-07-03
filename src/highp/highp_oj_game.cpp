@@ -47,8 +47,28 @@ twitch_users_match(const TwitchUser& rhs, const TwitchUser& lhs)
 }
 
 
-FUNCTION
-HIGHP_COMMAND_FUNCTION(highp_github)
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_commands)
+{
+    if (!twitchCommand->user.channelModerator ||
+        !twitchCommand->user.channelBroadcaster)
+    {
+        return;
+    }
+    
+    TwitchMessage* response = push<TwitchMessage>(Oj.memory);
+    response->user = twitchCommand->user;
+    memcpy(response->channel, twitchCommand->channel, TWITCH_USER_NAME_BUFFER);
+    String commandsresponse = string_from_buffer(response->message, TWITCH_MESSAGE_BUFFER);
+    
+    commandsresponse <<
+        "/me Commands list: !open !play !d4 !teams !nextround !winner "
+        "!queue !remove !github !commands";
+    
+    response->messageLength = commandsresponse.length;
+    client->SendTwitchMessage(response);
+}
+
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_github)
 {
     TwitchMessage* response = push<TwitchMessage>(Oj.memory);
     response->user = twitchCommand->user;
@@ -63,8 +83,7 @@ HIGHP_COMMAND_FUNCTION(highp_github)
     client->SendTwitchMessage(response);
 }
 
-FUNCTION
-HIGHP_COMMAND_FUNCTION(highp_open)
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_open)
 {
     TwitchMessage* response = push<TwitchMessage>(Oj.memory);
     response->user = twitchCommand->user;
@@ -83,8 +102,7 @@ HIGHP_COMMAND_FUNCTION(highp_open)
     }
 }
 
-FUNCTION
-HIGHP_COMMAND_FUNCTION(highp_play)
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_play)
 {
     TwitchMessage* response = push<TwitchMessage>(Oj.memory);
     response->user = twitchCommand->user;
@@ -126,8 +144,7 @@ HIGHP_COMMAND_FUNCTION(highp_play)
     client->SendTwitchMessage(response);
 }
 
-FUNCTION
-HIGHP_COMMAND_FUNCTION(highp_d4)
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_d4)
 {
     TwitchMessage* response = push<TwitchMessage>(Oj.memory);
     response->user = twitchCommand->user;
@@ -206,8 +223,7 @@ HIGHP_COMMAND_FUNCTION(highp_d4)
 }
 
 
-FUNCTION
-HIGHP_COMMAND_FUNCTION(highp_teams)
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_teams)
 {
     if (Oj.state != OJ_GAME_IN_PROGRESS) return;
     
@@ -277,8 +293,7 @@ HIGHP_COMMAND_FUNCTION(highp_teams)
     client->SendTwitchMessage(response);
 }
 
-FUNCTION
-HIGHP_COMMAND_FUNCTION(highp_winner)
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_winner)
 {
     if (Oj.state != OJ_GAME_IN_PROGRESS) return;
     
@@ -347,8 +362,7 @@ HIGHP_COMMAND_FUNCTION(highp_winner)
     client->SendTwitchMessage(response);
 }
 
-FUNCTION
-HIGHP_COMMAND_FUNCTION(highp_nextround)
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_nextround)
 {
     if (OJ_GAME_IN_PROGRESS == Oj.state) return;
     
@@ -368,8 +382,7 @@ HIGHP_COMMAND_FUNCTION(highp_nextround)
     client->SendTwitchMessage(response);
 }
 
-FUNCTION
-HIGHP_COMMAND_FUNCTION(highp_queue)
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_queue)
 {
     if (OJ_GAME_NOT_STARTED == Oj.state) return;
     
@@ -396,8 +409,7 @@ HIGHP_COMMAND_FUNCTION(highp_queue)
     client->SendTwitchMessage(response);
 }
 
-FUNCTION
-HIGHP_COMMAND_FUNCTION(highp_remove)
+FUNCTION HIGHP_COMMAND_FUNCTION(highp_remove)
 {
     if (OJ_GAME_NOT_STARTED == Oj.state) return;
     if (!twitchCommand->cmdMessage[0]) return;
