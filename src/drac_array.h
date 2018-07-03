@@ -10,9 +10,8 @@
 #define STACK_ARRAY_BUFFER CONCAT(_temparr_,__LINE__)
 
 #define STACK_ARRAY_COUNT_ZERO(arrayName, T, count)\
-u64 STACK_ARRAY_SIZE = align8(sizeof(T)*(max(ARRAY_MIN_ALLOCATED+1, count+1)) - 1);\
-T* STACK_ARRAY_BUFFER = (T*)alloca(STACK_ARRAY_SIZE); \
-Array<T> arrayName = array_from_buffer<T>(STACK_ARRAY_SIZE, STACK_ARRAY_BUFFER)
+T STACK_ARRAY_BUFFER [count]; \
+Array<T> arrayName = array_from_buffer<T>(sizeof(STACK_ARRAY_BUFFER), STACK_ARRAY_BUFFER)
 
 #define STACK_ARRAY_COUNT_N(arrayName, T, count_) \
 STACK_ARRAY_COUNT_ZERO(arrayName, T, count_); arrayName.count = count_
@@ -31,7 +30,6 @@ struct Array
     T* items;
     s32 capacity;
     s32 count;
-    bool32 isDynamic;
     
     inline T& operator[] (s32 index) const
     {
@@ -59,13 +57,11 @@ struct ArrayIterator
     }
     inline ArrayIterator<T>& operator++()
     {
-        assert(index >= 0 && (!array->count || index < array->count));
         ++index;
         return *this;
     }
     inline ArrayIterator<T>& operator--()
     {
-        assert(index >= 0 && (!array->count || index < array->count));
         --index;
         return *this;
     }
@@ -75,7 +71,7 @@ struct ArrayIterator
     }
     inline bool32 is_beginning()
     {
-        return index == 0;
+        return index <= 0;
     }
 };
 
@@ -88,37 +84,11 @@ make_iterator(Array<T>* array)
     return it;
 }
 
-ARRAY_FUNCTION Array<T>
-allocate_array(s32 initAllocated = ARRAY_MIN_ALLOCATED)
+ARRAY_FUNCTION  Array<T>
+array_from_buffer(void* buffer, u64 bufferNumBytes)
 {
-    assert(initAllocated > 0);
-    initAllocated = max(initAllocated, ARRAY_MIN_ALLOCATED);
-    
-    auto itemsMem = (T*)PLATFORM_MALLOC(initAllocated * sizeof(T));
-    assert_msg(itemsMem, "Tried to allocate Array but failed");
-    
-    Array<T> array;
-    array.capacity = initAllocated;
-    array.count = 0;
-    array.isDynamic = BOOL_TRUE;
-    array.items = itemsMem;
-    return array;
-}
-
-ARRAY_FUNCTION void
-free_array(Array<T>* array)
-{
-    assert(array->isDynamic);
-    PLATFORM_FREE(array->items);
-    *array = {};
-}
-
-ARRAY_FUNCTION Array<T>
-array_from_buffer(u64 bufferNumBytes, void* buffer)
-{
-    u64 alignOfT = alignment_of_struct(T);
-    alignOfT = align8(alignOfT);
-    byte* alignedBuffer = (byte*)alignN((u64)buffer, alignOfT);
+    u64 alignOfT = alignof(T);
+    byte* alignedBuffer = (byte*)align_n((u64)buffer, alignOfT);
     u64 trashedBytes = alignedBuffer - (byte*)buffer;
     bufferNumBytes -= trashedBytes;
     
@@ -129,46 +99,20 @@ array_from_buffer(u64 bufferNumBytes, void* buffer)
     Array<T> array;
     array.capacity = buffersArrayItemCount;
     array.count = 0;
-    array.isDynamic = BOOL_FALSE;
     array.items = (T*)alignedBuffer;
     return array;
 }
 
-ARRAY_FUNCTION bool32
-array_reserve(Array<T>* array, s32 countItems)
-{
-    if (array->capacity >= countItems) return BOOL_TRUE;
-    if (!array->isDynamic) return BOOL_FALSE;
-    
-    // find next power of 2 bigger than requested count
-    s64 newArrayLength = 1;
-    s64 lg = array->capacity;
-    while(lg >>= 1) newArrayLength *= 2;
-    while(newArrayLength < countItems) newArrayLength *= 2;
-    
-    u64 itemsBytes = newArrayLength * sizeof(T);
-    u64 objBytes = offset_of(Array<T>, items);
-    
-    auto newBuffer = (T*)PLATFORM_REALLOC(array, itemsBytes + objBytes);
-    if (!newBuffer) {
-        return BOOL_FALSE;
-    }
-    
-    array->capacity = (u32)newArrayLength;
-    array->items = newBuffer;
-    return BOOL_TRUE;
-}
-
 ARRAY_FUNCTION FORCE_INLINE bool32
-array_reserve_n_more_items(Array<T>* array, s32 countItems)
+array_check_n_more_items(Array<T>* array, s32 countItems)
 {
-    return array_reserve(array, array->count + countItems);
+    return array->capacity >= (array->count + countItems);
 }
 
 ARRAY_FUNCTION s32 
 array_add(Array<T>* array, const T& item)
 {
-    if (!array_reserve_n_more_items(array, 1)) return -1;
+    if (!array_check_n_more_items(array, 1)) return -1;
     
     array->items[array->count] = item;
     array->count += 1;
@@ -178,7 +122,7 @@ array_add(Array<T>* array, const T& item)
 ARRAY_FUNCTION s32
 array_add_range(Array<T>* array, const T* items, u32 countItems)
 {
-    if (!array_reserve_n_more_items(array, countItems)) return -1;
+    if (!array_check_n_more_items(array, countItems)) return -1;
     
     memcpy(array->items + array->count, items, countItems * sizeof(T));
     array->count += countItems;
@@ -194,7 +138,7 @@ array_add_array(Array<T>* dst, const Array<T>* src)
 ARRAY_FUNCTION s32
 array_insert_unordered(Array<T>* array, T& item, s32 index)
 {
-    if (!array_reserve_n_more_items(array, 1)) return -1;
+    if (!array_check_n_more_items(array, 1)) return -1;
     
     array->items[array->count] = array->items[index];
     array->items[index] = item;
@@ -205,7 +149,7 @@ array_insert_unordered(Array<T>* array, T& item, s32 index)
 ARRAY_FUNCTION s32
 array_insert_ordered(Array<T>* array, T& item, s32 index)
 {
-    if (!array_reserve_n_more_items(array, 1)) return -1;
+    if (!array_check_n_more_items(array, 1)) return -1;
     
     memmove(&array->items[index + 1], 
             &array->items[index],

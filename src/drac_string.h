@@ -5,25 +5,25 @@
 #define FUNCTION 
 #endif
 
+#define DRAC_STRING_IMPLEMENTATIONS 1
+
 #include "platform.h"
 
 #define STACK_STRBUFFER_NAME  CONCAT(_tempstring_, __LINE__)
 #define STACK_STRING(stringName, bufferLength) \
-char* STACK_STRBUFFER_NAME = (char*)alloca(bufferLength); \
-String stringName = string_from_buffer(bufferLength, STACK_STRBUFFER_NAME)
+char STACK_STRBUFFER_NAME [bufferLength + 1]; \
+String stringName = string_from_buffer(STACK_STRBUFFER_NAME,bufferLength)
 
 // needs to be void bc we cannot do pointer math on a utf8 string
 // a utf8 character can be 1, 2, 3, or 4 bytes long
 typedef void utf8;
 
-
 struct String
 {
     s64 capacity;     // the number of characters available for writing
     s64 length;       // number of characters until the NULL-terminator
-    bool32 isDynamic; // if this String is able to grow/reallocate allocate_string
     char* str;        // start of the string buffer for writing
-    FORCE_INLINE char& operator[](s32 i) { return str[i]; }
+    inline char& operator[](s64 i) { return str[i]; }
 };
 
 struct StringReader
@@ -57,11 +57,8 @@ String& operator<<(String& s, T item)
     return s;
 }
 
-FUNCTION String  allocate_string(u64 bufferInitialLength = 0);
-FUNCTION void    free_string(String* s);
-FUNCTION String  string_from_buffer(u64 bufferSize, void* buffer);
+FUNCTION String  string_from_buffer(void* buffer, u64 bufferSize);
 FUNCTION void    string_clear(String* s);
-FUNCTION String  clone(const String* s);
 
 FUNCTION void append_nchars(String* s, const char* str, u32 nchars);
 FUNCTION void append(String* s, const char* str);
@@ -180,12 +177,7 @@ FUNCTION void           to_lower(String* s);
 FUNCTION void           to_upper(String* s);
 FUNCTION void           to_lower(char* s);
 FUNCTION void           to_upper(char* s);
-FUNCTION inline String  clone_to_lower(const String* s);
-FUNCTION inline String  clone_to_upper(const String* s);
 FUNCTION void           trim_whitespace(String* s);
-FUNCTION inline String  clone_trim_whitespace(const String* s);
-
-
 
 FUNCTION u64 parse_u64(const String* s);
 FUNCTION u64 parse_u64(const char* s);
@@ -413,30 +405,6 @@ char_equals_ignore_case(char a, char b)
     return char_to_upper(a) == char_to_upper(b);
 }
 
-FUNCTION inline String
-clone_to_lower(const String* s)
-{
-    String ret = clone(s);
-    to_lower(&ret);
-    return ret;
-}
-
-FUNCTION inline String
-clone_to_upper(const String* s)
-{
-    String ret = clone(s);
-    to_upper(&ret);
-    return ret;
-}
-
-FUNCTION inline String
-clone_trim_whitespace(const String* s)
-{
-    String ret = clone(s);
-    trim_whitespace(&ret);
-    return ret;
-}
-
 FUNCTION inline s32
 find(const String* s, const char* thing)
 {
@@ -559,78 +527,12 @@ contains_ignore_case(const char* s, const char* thing)
 // static implementations of my string library
 //
 
-#ifndef DRAC_STRING_IMPLEMENTATIONS
+#ifdef DRAC_STRING_IMPLEMENTATIONS
 
 #pragma region String Implementations
 
-#define MIN_ALLOCATED 32
-
-FUNCTION bool32
-reserve(String* s, s64 stringLength)
-{
-    if (s->capacity >= stringLength) 
-    {
-        return BOOL_TRUE;
-    }
-    
-    if (!s->isDynamic) 
-    {
-        return BOOL_FALSE;
-    }
-    
-    // find next power of 2 bigger than requested length
-    s64 newLength = 1;
-    s64 lg = s->capacity;
-    while(lg >>= 1) newLength *= 2;
-    while(newLength < stringLength) newLength *= 2;
-    
-    char* newBuf = (char*)PLATFORM_REALLOC(s->str, newLength);
-    if (!newBuf)
-    {
-        return BOOL_FALSE;
-    }
-    
-    s->capacity = newLength;
-    s->str = newBuf;
-    return BOOL_TRUE;
-}
-
-inline FUNCTION bool32 
-reserve_n_more_bytes(String* s, s64 n)
-{
-    return reserve(s, n + s->length);
-}
-
 FUNCTION String
-allocate_string(u64 bufferInitialLength)
-{
-    bufferInitialLength = max(MIN_ALLOCATED, bufferInitialLength);
-    char* buf = (char*)PLATFORM_MALLOC(bufferInitialLength);
-    assert_msg(buf, "Tried to allocate a String but failed");
-    
-    String s;
-    
-    s.length = 0;
-    s.capacity = bufferInitialLength;
-    s.isDynamic = BOOL_TRUE;
-    s.str = buf;
-    s.str[0] = NULL;
-    
-    return s;
-}
-
-FUNCTION void 
-free_string(String* s)
-{
-    assert(s->isDynamic);
-    s->capacity = 0;
-    s->length = 0;
-    s->isDynamic = BOOL_FALSE;
-    PLATFORM_FREE(s->str);
-}
-
-FUNCTION String
-string_from_buffer(u64 bufferLength, void* buffer)
+string_from_buffer(void* buffer, u64 bufferLength)
 {
     char* alignedBuffer = (char*)align_8((uptr)buffer);
     assert((uptr)alignedBuffer > 0);
@@ -638,14 +540,17 @@ string_from_buffer(u64 bufferLength, void* buffer)
     s64 diff = abs((char*)buffer - alignedBuffer);
     
     String s;
-    
     s.length = 0;
     s.capacity = bufferLength - diff;
-    s.isDynamic = BOOL_FALSE;
     s.str = alignedBuffer;
     s.str[0] = NULL;
-    
     return s;
+}
+
+FUNCTION inline bool32
+check_string_n_more_bytes(String* s, s64 extra)
+{
+    return s->capacity > s->length + extra;
 }
 
 FUNCTION void
@@ -655,27 +560,15 @@ string_clear(String* s)
     s->length = 0;
 }
 
-FUNCTION String
-clone(const String* s)
-{
-    String ret = allocate_string(s->capacity);
-    
-    memcpy(ret.str, s->str, s->length);
-    ret.length = s->length;
-    ret.isDynamic = BOOL_TRUE;
-    ret.str[ret.length] = 0;
-    
-    return ret;
-}
-
 FUNCTION void 
 append_nchars(String* s, const char* str, u32 nchars)
 {
-    bool32 result = reserve_n_more_bytes(s, nchars);
+    bool32 result = check_string_n_more_bytes(s, nchars);
     assert_msg(result, "tried to overwrite string buffer");
+    if (!result) return;
     
     for(u32 i = 0;
-        str[i] && (i < nchars) && (i < (s->capacity-1));
+        (i < nchars) && (i < (s->capacity-1));
         ++i)
     {
         s->str[s->length] = str[i];
@@ -979,7 +872,24 @@ string_is_null_or_whitespace(const String* s)
     if (string_is_null_or_empty(s)) return BOOL_TRUE;
     for(s32 i = 0; i < s->length; ++i)
     {
-        if (char_is_whitespace(s->str[0])) return BOOL_FALSE;
+        if (!char_is_whitespace(s->str[0])) return BOOL_FALSE;
+    }
+    return BOOL_TRUE;
+}
+
+FUNCTION bool32
+string_is_null_or_empty(const char* s)
+{
+    return !(s && s[0]);
+}
+
+FUNCTION bool32
+string_is_null_or_whitespace(const char* s)
+{
+    if (string_is_null_or_empty(s)) return BOOL_TRUE;
+    for_str(s)
+    {
+        if (!char_is_whitespace(*it)) return BOOL_FALSE;
     }
     return BOOL_TRUE;
 }
@@ -1418,14 +1328,11 @@ FUNCTION bool32
 match_nbytes(const char* a, const char* b, s32 nbytes)
 {
     s32 bytesPerCompare = 1;
-#ifdef DRAC_SSE2
     if (nbytes >= 16 && ((uptr)a % 16) == ((uptr)b % 16))
     {
         bytesPerCompare = 16;
     }
-    else
-#endif
-        if (nbytes >= 8 && ((uptr)a % 8) == ((uptr)b % 8))
+    else if (nbytes >= 8 && ((uptr)a % 8) == ((uptr)b % 8))
     {
         bytesPerCompare = 8;
     }
@@ -1447,7 +1354,6 @@ match_nbytes(const char* a, const char* b, s32 nbytes)
         }
     }
     
-#ifdef DRAC_SSE2
     if (16 == bytesPerCompare)
     {
         for (register size_t sseIt = 0; sseIt < sseCount; ++sseIt) 
@@ -1462,9 +1368,7 @@ match_nbytes(const char* a, const char* b, s32 nbytes)
             a += 16; b += 16;
         }
     }
-    else 
-#endif
-        if (8 == bytesPerCompare)
+    else if (8 == bytesPerCompare)
     {
         for (register size_t sseIt = 0; sseIt < sseCount; ++sseIt) 
         {
@@ -1655,7 +1559,6 @@ parse_u64(const char* s)
     return ret;
 }
 
-
-#endif
+#endif /* DRAC_STRING_IMPLEMENTATIONS */
 
 #endif /* DRAC_STRING_H */

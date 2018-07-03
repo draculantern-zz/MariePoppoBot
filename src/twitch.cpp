@@ -70,13 +70,13 @@ twitch_dispatch_callbacks(const TwitchClient* client,
                           const char* twitchText, 
                           u32 twitchTextLength)
 {
-    char* parsedMsg = (char*)PLATFORM_MALLOC(twitchTextLength + 1);
-    defer { PLATFORM_FREE(parsedMsg); };
+    begin_temp_stack(client->arena);
+    defer { end_temp_stack(client->arena); };
+    char* parsedMsg = (char*)push_size(client->arena, twitchTextLength);
     
-    // please i hope twitch never gives us this many lol, otherwise we'll drop messages
-    LOCAL_STATIC const s32 maxReceivedMsgs = 1024;
-    LOCAL_STATIC char* receivedMsgs[maxReceivedMsgs];
-    s32 receivedMsgsCount = 0;
+    // i hope we never get more than 1024 messages at once, lol
+    const u32 maxReceivedMsgs = 1024;
+    Array<char*> receivedMsgs = push_array<char*>(client->arena, maxReceivedMsgs);
     
     {
         memcpy(parsedMsg, twitchText, twitchTextLength);
@@ -87,13 +87,13 @@ twitch_dispatch_callbacks(const TwitchClient* client,
         {
             auto nextTwitchMsgStart = seek_next_line(&msgReader, NEWLINE_CR_LF);
             parsedMsg[nextTwitchMsgStart - 2] = 0;
-            receivedMsgs[receivedMsgsCount] = parsedMsg + crntTwitchMsgStart;
-            ++receivedMsgsCount;
+            array_add(&receivedMsgs, parsedMsg + crntTwitchMsgStart);
             crntTwitchMsgStart = msgReader.cursor;
-        } while(receivedMsgsCount < maxReceivedMsgs && valid_index(&msgReader, msgReader.cursor));
+        } while(receivedMsgs.count < maxReceivedMsgs && valid_index(&msgReader, msgReader.cursor));
     }
     
-    for(auto i = 0; i < receivedMsgsCount; ++i)
+    
+    for(auto i = 0; i < receivedMsgs.count; ++i)
     {
         bool32 msgHandled = BOOL_FALSE;
         char* msg = receivedMsgs[i];

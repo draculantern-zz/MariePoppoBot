@@ -113,22 +113,21 @@ struct ExitScope
 class ExitScopeHelp
 {
     public:
-    template<typename T>
-        ExitScope<T> operator+(T t) { return t; }
+    template<typename T> ExitScope<T> operator+(T t) { return t; }
 };
 
-#define for_str(str_) \
-for (auto it = str_;  \
-*it != 0;        \
-++it)
+#define for_str(str_) for (auto it = str_; *it != 0; ++it)
 
 
+#ifndef CRASH
 #define CRASH *(volatile int*)0 = 0
-#define NOT_IMPLEMENTED assert(!"function not implemented!")
+#endif
+
+#define NOT_IMPLEMENTED PLATFORM_LOG_ERROR("function not implemented!"); CRASH
 #define _CONST_LITERAL_TO_STRING(x) #x
 #define TO_STRING(x) _CONST_LITERAL_TO_STRING(x)
 #define HAS_BITMASK(flags, bits) (((flags) | (bits)) == (flags))
-#define PFN(fn) PFN_##fn
+#define PFN(fn) PFN_ ## fn
 
 #define IF_DEBUG if(DEBUG)
 
@@ -156,6 +155,13 @@ if (!(_expr)) { \
 #   define assert_msg(_expr, msg) 
 #endif
 
+#define memzero(data, numbytes) memset(data, 0, numbytes)
+
+#define abs(x) ( ((x) >= 0) ? (x) : (-(x)) )
+#define min(x, y) (((x) < (y)) ? (x) : (y))
+#define max(x, y) (((x) > (y)) ? (x) : (y))
+#define clamp(x, low, high) (min(max((x), (low)), (high)))
+#define lerp(a, b, T) ((a) + ((T) * ((b) - (a))))
 
 #define align_2(val) (((val) + 1) & ~1)
 #define align_4(val) (((val) + 3) & ~3)
@@ -172,31 +178,128 @@ if (!(_expr)) { \
 #define align_n(val, alignment) (((val) + ((alignment)-1)) & ~((alignment)-1))
 #define align_down_n(val, alignment) ((val) & ~((alignment)-1))
 
-#define abs(x) ( ((x) >= 0) ? (x) : (-(x)) )
-#define min(x, y) (((x) < (y)) ? (x) : (y))
-#define max(x, y) (((x) > (y)) ? (x) : (y))
-#define clamp(x, low, high) (min(max((x), (low)), (high)))
-#define lerp(a, b, T) ((a) + ((T) * ((b) - (a))))
+FORCE_INLINE u32
+align_power_of_2(u32 i)
+{
+    i--;
+    i |= i >> 1; i |= i >> 2; i |= i >> 4; i |= i >> 8; i |= i >> 16; 
+    i++; return i;
+}
 
-#define memzero(data, numbytes) memset(data, 0, numbytes)
+FORCE_INLINE u64
+align_power_of_2(u64 i)
+{
+    i--;
+    i |= i >> 1; i |= i >> 2; i |= i >> 4; i |= i >> 8; i |= i >> 16; i |= i >> 32;
+    i++; return i;
+}
 
 
-#if !defined(PLATFORM_MALLOC) && !defined(PLATFORM_FREE) && !defined(PLATFORM_REALLOC)
+//
+// Platform Memory
+//
 
-#   define PLATFORM_MALLOC(nbytes) malloc(nbytes)
-#   define PLATFORM_FREE(ptr) free(ptr)
-#   define PLATFORM_REALLOC(ptr,nbytes) realloc(ptr,nbytes)
+enum MemoryAllocationFlagBits
+{
+    ALLOCATION_OVERFLOW_GUARD  = 0x1,
+    ALLOCATION_ZERO_INIT       = 0x4,
+};
+typedef u64 MemoryAllocationFlags;
 
-#elif (defined(PLATFORM_MALLOC) && \
-(!defined(PLATFORM_FREE) || !defined(PLATFORM_REALLOC))) \
-|| (defined(PLATFORM_FREE) && \
-(!defined(PLATFORM_MALLOC) || !defined(PLATFORM_REALLOC))) \
-|| (defined(PLATFORM_REALLOC) && \
-(!defined(PLATFORM_MALLOC) || !defined(PLATFORM_FREE)))
+struct MemoryAllocation
+{
+    MemoryAllocationFlags flags;
+    u64 size;
+    byte* ptr;
+    void* userData;
+};
 
-#   error Must define all of PLATFORM_MALLOC, PLATFORM_FREE, PLATFORM_REALLOC or none of them
+#define PLATFORM_ALLOCATE_MEMORY(fn) \
+MemoryAllocation* fn(u64 size, MemoryAllocationFlags flags)
+typedef PLATFORM_ALLOCATE_MEMORY( (*PFN(AllocateMemory)) );
 
-#endif /* Platform allocation defs */
+#define PLATFORM_FREE_MEMORY(fn) \
+void fn(MemoryAllocation* allocation)
+typedef PLATFORM_FREE_MEMORY( (*PFN(FreeMemory)) );
+
+
+//
+// Platform multithreading
+//
+
+inline u32 platform_thread_id();
+inline u32 platform_main_thread_id();
+
+struct PlatformWork;
+struct PlatformWorkQueue;
+
+#define PLATFORM_WORK_QUEUE_CALLBACK(fn) \
+void fn(PlatformWorkQueue* queue, void* userData)
+typedef PLATFORM_WORK_QUEUE_CALLBACK( (*PFN(PlatformWorkQueueCallback)) );
+
+#define PLATFORM_ADD_WORK_TO_QUEUE(fn) \
+void fn(PlatformWorkQueue* queue, PlatformWork* work)
+typedef PLATFORM_ADD_WORK_TO_QUEUE( (*PFN(AddWorkToQueue)) );
+
+#define PLATFORM_COMPLETE_ALL_WORK(fn)\
+void fn(PlatformWorkQueue* queue)
+typedef PLATFORM_COMPLETE_ALL_WORK( (*PFN(CompleteAllWork)) );
+
+struct PlatformWork
+{
+    void* userData;
+    PFN(PlatformWorkQueueCallback) callback;
+    //@TODO ?? "destructor" callback
+};
+
+
+//
+// Platform file functions
+//
+
+struct PlatformFileHandle
+{
+    u32 id;
+};
+
+#define PLATFORM_OPEN_FILE(fn) \
+PlatformFileHandle fn(const char* fileName)
+typedef PLATFORM_OPEN_FILE( (*PFN(OpenFile)) );
+
+#define PLATFORM_CREATE_NEW_FILE(fn) \
+PlatformFileHandle fn(const char* fileName)
+typedef PLATFORM_CREATE_NEW_FILE( (*PFN(CreateNewFile)) );
+
+#define PLATFORM_READ_FROM_FILE(fn) \
+PlatformFileHandle fn(PlatformFileHandle handle, \
+s64 offset, s64 numBytes, void* buffer)
+typedef PLATFORM_READ_FROM_FILE( (*PFN(ReadFromFile)) );
+
+#define PLATFORM_CLOSE_FILE(fn) \
+void fn(PlatformFileHandle handle)
+typedef PLATFORM_CLOSE_FILE( (*PFN(CloseFile)) );
+
+#define PLATFORM_FILE_SIZE(fn) \
+s64 fn(PlatformFileHandle handle)
+typedef PLATFORM_FILE_SIZE( (*PFN(FileSize)) );
+
+
+#define PLATFORM_API_FN(fn) PFN(fn) fn
+struct PlatformApi
+{
+    PLATFORM_API_FN(AllocateMemory);
+    PLATFORM_API_FN(FreeMemory);
+    
+    PLATFORM_API_FN(AddWorkToQueue);
+    PLATFORM_API_FN(CompleteAllWork);
+    
+    PLATFORM_API_FN(OpenFile);
+    PLATFORM_API_FN(CreateNewFile);
+    PLATFORM_API_FN(ReadFromFile);
+    PLATFORM_API_FN(CloseFile);
+    PLATFORM_API_FN(FileSize);
+};
+extern PlatformApi Platform;
 
 #if !defined(PLATFORM_LOG)
 #   define PLATFORM_LOG(str) printf(str)

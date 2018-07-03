@@ -2,6 +2,7 @@
 #define TWITCH_H
 
 #include "platform.h"
+#include "drac_memory.h"
 #include "drac_string.h"
 
 struct TwitchClient;
@@ -17,32 +18,24 @@ enum TwitchErrorCode
 };
 
 
-#define RECEIVE_TWITCH_MESSAGE_CALLBACK(fnName)  \
-FUNCTION void fnName(const TwitchClient* client, \
-const TwitchMessage* twitchMessage)
-typedef void (*PFN(ReceiveTwitchMessage))(const TwitchClient* client,
-                                          const TwitchMessage* twitchMessage);
+#define RECEIVE_TWITCH_MESSAGE_CALLBACK(fnName) \
+void fnName(const TwitchClient* client, const TwitchMessage* twitchMessage)
+typedef RECEIVE_TWITCH_MESSAGE_CALLBACK( (*PFN(ReceiveTwitchMessage)) );
 
-#define RECEIVE_TWITCH_COMMAND_CALLBACK(fnName)  \
-FUNCTION void fnName(const TwitchClient* client, \
-const TwitchCommand* twitchCommand)
-typedef void (*PFN(ReceiveTwitchCommand))(const TwitchClient* client,
-                                          const TwitchCommand* twitchCommand);
+#define RECEIVE_TWITCH_COMMAND_CALLBACK(fnName) \
+void fnName(const TwitchClient* client, const TwitchCommand* twitchCommand)
+typedef RECEIVE_TWITCH_COMMAND_CALLBACK( (*PFN(ReceiveTwitchCommand)) );
 
 typedef void TwitchPlatformData;
-#define SEND_TWITCH_MESSAGE_CALLBACK(fnName)                \
-FUNCTION TwitchErrorCode fnName(const TwitchClient* client, \
-const TwitchMessage* twitchMessage)
-typedef TwitchErrorCode (*PFN(SendTwitchMessage))(const TwitchClient* client,
-                                                  const TwitchMessage* twitchMessage);
+#define SEND_TWITCH_MESSAGE_CALLBACK(fnName) \
+TwitchErrorCode fnName(const TwitchClient* client,const TwitchMessage* twitchMessage)
+typedef SEND_TWITCH_MESSAGE_CALLBACK( (*PFN(SendTwitchMessage)) );
 
 #define SEND_TWITCH_TEXT_CALLBACK(fnName) \
-FUNCTION TwitchErrorCode fnName(const TwitchClient* client, \
-const char* text, \
+TwitchErrorCode fnName(const TwitchClient* client, \
+const char* text,\
 s32 textLength)
-typedef TwitchErrorCode (*PFN(SendText))(const TwitchClient* client,
-                                         const char* text, 
-                                         s32 textLength);
+typedef SEND_TWITCH_TEXT_CALLBACK( (*PFN(SendText)) );
 
 #define TWITCH_MESSAGE_MAX_LENGTH 500
 #define TWITCH_MESSAGE_BUFFER 512
@@ -85,6 +78,7 @@ TWITCH_CALLBACK_NAME(fn) (this, __VA_ARGS__);
 
 struct TwitchClient
 {
+    MemoryArena* arena;
     DECLARE_TWITCH_CALLBACK(ReceiveTwitchMessage);
     DECLARE_TWITCH_CALLBACK(ReceiveTwitchCommand);
     DECLARE_TWITCH_CALLBACK(SendTwitchMessage);

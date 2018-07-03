@@ -1,70 +1,20 @@
+#include "win32_platform.h"
 #include "win32_twitch_client.h"
 
 #include "platform.h"
 #include "drac_array.h"
 #include "drac_random.h"
 #include "drac_string.h"
+#include "drac_memory.h"
 
+#include "win32_platform.cpp"
 #include "drac_random.cpp"
 #include "twitch.cpp"
 #include "highp/highp.cpp"
 
+PlatformApi Platform;
 
 #define RECEIVE_BUFFER_LENGTH (megabytes(1))
-
-
-//
-// @TODO using the heap is bad, lol
-//       this is a tiny baby program, I'll start refactoring this out to 
-//       real memory allocation when queen starts requesting more features
-//
-GLOBAL HANDLE ProcessHeap = null;
-
-FUNCTION void* 
-win32_heap_alloc(u64 numbytes) 
-{
-    if (!ProcessHeap) ProcessHeap = GetProcessHeap();
-    numbytes = align_8(numbytes);
-    return HeapAlloc(ProcessHeap, HEAP_ZERO_MEMORY, numbytes);
-}
-
-FUNCTION void* 
-win32_heap_realloc(void* data, u64 numbytes) 
-{
-    numbytes = align_8(numbytes);
-    
-    void* firstTryRealloc =
-        HeapReAlloc(ProcessHeap, 
-                    HEAP_ZERO_MEMORY | HEAP_REALLOC_IN_PLACE_ONLY, 
-                    data, 
-                    numbytes);
-    
-    if (firstTryRealloc) return firstTryRealloc;
-    
-    return HeapReAlloc(ProcessHeap, 
-                       HEAP_ZERO_MEMORY, 
-                       data, 
-                       numbytes);
-}
-
-FUNCTION void 
-win32_heap_free(void* data)
-{
-    HeapFree(ProcessHeap, 0, data);
-}
-
-FUNCTION void 
-win32_print(const char* buf)
-{
-    LOCAL_STATIC HANDLE StdOut = null;
-    if (!StdOut) 
-    {
-        StdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    }
-    WriteFile(StdOut, 
-              buf, (DWORD)strlen(buf),
-              null, null);
-}
 
 FUNCTION s32
 win32_try_connect_twitch(Win32TwitchClient* client)
@@ -130,8 +80,7 @@ win32_try_connect_twitch(Win32TwitchClient* client)
     
     
     // login
-    String sendString = allocate_string(); 
-    defer { free_string(&sendString); };
+    STACK_STRING(sendString, kilobytes(1));
     twitch_format_pass_message(client->pass, &sendString);
     
     int passResult =send(client->ircSocket, sendString.str, (int)sendString.length, 0);
@@ -187,7 +136,7 @@ win32_twitch_wait()
     twitch_wait_to_not_get_banned(seconds);
 }
 
-
+FUNCTION
 SEND_TWITCH_TEXT_CALLBACK(win32_send_text)
 {
     win32_twitch_wait();
@@ -204,12 +153,13 @@ SEND_TWITCH_TEXT_CALLBACK(win32_send_text)
     return TWITCH_SUCCESS;
 }
 
+FUNCTION
 SEND_TWITCH_MESSAGE_CALLBACK(win32_send_message)
 {
     win32_twitch_wait();
     Win32TwitchClient* win32Client = (Win32TwitchClient*)client->reserved;
     
-    STACK_STRING(formattedMessage, 256 + twitchMessage->messageLength);
+    STACK_STRING(formattedMessage, TWITCH_MESSAGE_BUFFER);
     
     twitch_format_channel_message(twitchMessage, &formattedMessage);
     
@@ -225,9 +175,11 @@ SEND_TWITCH_MESSAGE_CALLBACK(win32_send_message)
     return TWITCH_SUCCESS;
 }
 
-extern "C" void 
+int __stdcall
 mainCRTStartup()
 {
+    win32_platform_init();
+    
     //
     // Setup a console for the current Process 
     //
@@ -282,11 +234,8 @@ mainCRTStartup()
     }
     
     DWORD configFileSize = GetFileSize(configFile, NULL);
-    char* configBuffer = (char*)VirtualAlloc(0, 
-                                             configFileSize, 
-                                             MEM_COMMIT | MEM_RESERVE,
-                                             PAGE_READWRITE);
-    defer {  VirtualFree(configBuffer, 0, MEM_DECOMMIT | MEM_RELEASE); };
+    MemoryAllocation* configAllocation = win32_allocate_virtual_memory(megabytes(1), ALLOCATION_OVERFLOW_GUARD);
+    char* configBuffer = (char*)configAllocation->ptr;
     
     configBuffer[configFileSize] = 0;
     DWORD countBytesIn;
@@ -302,7 +251,7 @@ mainCRTStartup()
             
             s32 startConfigOption = seek_next_alpha(&configReader);
             
-            if (match("nick", (const char*)configBuffer + startConfigOption))
+            if (match("nick", (char*)configBuffer + startConfigOption))
             {
                 seek_next_char(&configReader, ':');
                 s32 startConfigValue = seek_past_whitespace(&configReader);
@@ -312,7 +261,7 @@ mainCRTStartup()
                 Client.nick = configBuffer + startConfigValue;
                 to_lower(Client.nick);
             } 
-            else if (match("pass", (const char*)configBuffer + startConfigOption)) 
+            else if (match("pass", (char*)configBuffer + startConfigOption)) 
             {
                 seek_next_char(&configReader, ':');
                 s32 startConfigValue = seek_past_whitespace(&configReader);
@@ -321,7 +270,7 @@ mainCRTStartup()
                 
                 Client.pass = configBuffer + startConfigValue;
             } 
-            else if (match("channel", (const char*)configBuffer + startConfigOption)) 
+            else if (match("channel", (char*)configBuffer + startConfigOption)) 
             {
                 seek_next_char(&configReader, ':');
                 s32 startConfigValue = seek_past_whitespace(&configReader);
@@ -336,7 +285,12 @@ mainCRTStartup()
         } while(seek_next_line(&configReader, LINE_FEED) < configReader.length);
     }
     
-    STACK_STRING(err, kilobytes(64));
+    win32_free_virtual_memory(configAllocation);
+    
+    
+    MemoryArena* stringMemory = allocate_memory_arena(kilobytes(64) + RECEIVE_BUFFER_LENGTH);
+    String err = push_string(stringMemory, kilobytes(64));
+    
     
     WSADATA wsaData;
     WORD wsaVersion = MAKEWORD(2, 2);
@@ -371,6 +325,8 @@ mainCRTStartup()
                                SendText,
                                &win32_send_text);
     
+    Client.twitchClient.arena = allocate_memory_arena(megabytes(1));
+    
     init_client(&Client.twitchClient);
     
     
@@ -387,10 +343,7 @@ mainCRTStartup()
         goto Close;
     }
     
-    char* receiveBuffer = (char*)VirtualAlloc(0, 
-                                              RECEIVE_BUFFER_LENGTH, 
-                                              MEM_COMMIT | MEM_RESERVE,
-                                              PAGE_READWRITE);
+    char* receiveBuffer = (char*)push_size(stringMemory, RECEIVE_BUFFER_LENGTH);
     assert(receiveBuffer);
     
     const int recvFlags = 0;

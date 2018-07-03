@@ -10,10 +10,6 @@
 
 int _fltused = 0x9875;
 
-void __chkstk()
-{ // needed for alloca
-}
-
 #pragma function(fabs)
 double fabs(double x)
 {

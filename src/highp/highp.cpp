@@ -7,12 +7,9 @@
 #include "drac_string.h"
 #include "drac_random.h"
 
-#define HIGHP_COMMAND_FUNCTION(fnName)           \
-FUNCTION void fnName(const TwitchClient* client, \
-const TwitchCommand* twitchCommand)
-
-typedef void (*PFN(HighpCommandFunction))(const TwitchClient* client,
-                                          const TwitchCommand* twitchCommand);
+#define HIGHP_COMMAND_FUNCTION(fnName) \
+void fnName(const TwitchClient* client, const TwitchCommand* twitchCommand)
+typedef HIGHP_COMMAND_FUNCTION( (*PFN(HighpCommandFunction)) );
 
 
 #include "highp.h"
@@ -39,6 +36,7 @@ HighpCommandMap HighpCommandList[]
     HIGHP_COMMAND_MAP("remove", highp_remove)
 };
 
+FUNCTION
 RECEIVE_TWITCH_MESSAGE_CALLBACK(highp_receive_message)
 {
     STACK_STRING(format, kilobytes(1));
@@ -48,8 +46,12 @@ RECEIVE_TWITCH_MESSAGE_CALLBACK(highp_receive_message)
     PLATFORM_LOG(format.str);
 }
 
+FUNCTION 
 RECEIVE_TWITCH_COMMAND_CALLBACK(highp_receive_command)
 {
+    begin_temp_stack(Oj.memory);
+    defer { end_temp_stack(Oj.memory); };
+    
     for(HighpCommandMap* cmdMap = HighpCommandList;
         cmdMap != &HighpCommandList[ARRAY_LENGTH(HighpCommandList)];
         ++cmdMap)
@@ -61,7 +63,8 @@ RECEIVE_TWITCH_COMMAND_CALLBACK(highp_receive_command)
         }
     }
     
-    STACK_STRING(format, kilobytes(1));
+    String format = push_string(Oj.memory, kilobytes(1));
+    
     format 
         << twitchCommand->user.displayName << ": "
         << client->cmdDesignator << twitchCommand->cmd;
@@ -80,18 +83,23 @@ init_client(TwitchClient* out)
     twitch_client_set_callback(*out, ReceiveTwitchMessage, &highp_receive_message);
     twitch_client_set_callback(*out, ReceiveTwitchCommand, &highp_receive_command);
     
+    // Oj initialization
     {
-        for(String* teamString = TeamLeaders;
-            teamString != &TeamLeaders[ARRAY_LENGTH(TeamLeaders)];
-            ++teamString)
-        {
-            *teamString = allocate_string();
-        }
+        const u32 ojMaxQueueLength = 64;
+        const u32 ojMaxRegisteredTeamMembers = 1024;
         
-        RegisteredTeamMembers = allocate_array<OjTeamMember>();
-        OjQueue = allocate_array<TwitchUser>();
+        Oj = {};
+        Oj.state = OJ_GAME_NOT_STARTED;
+        Oj.memory = allocate_memory_arena(megabytes(1) +
+                                          (ojMaxQueueLength * sizeof(TwitchUser)) +
+                                          (ojMaxRegisteredTeamMembers * sizeof(OjTeamMember)));
         
-        OjGameState = OJ_GAME_NOT_STARTED;
+        Oj.registeredTeamMembers = 
+            push_array<OjTeamMember>(Oj.memory, ojMaxRegisteredTeamMembers);
+        
+        Oj.queue = 
+            push_array<TwitchUser>(Oj.memory, ojMaxQueueLength);
+        
     }
 }
 
