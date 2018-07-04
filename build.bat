@@ -7,11 +7,12 @@ set BinaryName=highp
 set ExeName=%BinaryName%.exe
 
 set CompilerFlags= -nologo -I..\src\ ^
+ -GR- -Gm- -EHa- -Oi -fp:fast -fp:except- -GS- -Gs0x100000 ^
 -D_CRT_SECURE_NO_WARNINGS=1 -DNOMINMAX=1 ^
--W4 -WX -we4062 -we4061 -wd4100 -wd4189 -wd4127 -wd4505 -wd4201 -wd4533 -wd4389 ^
--wd4244 -GR- -Gm- -EHa- -Oi -fp:fast -fp:except- -GS- -Gs0xA00000
+-W4 -WX -we4061 -wd4100 -wd4189 -wd4127 -wd4505 -wd4201 ^
+-wd4533 -wd4389 -wd4244 -wd4820 
 
-set LinkFlags= /INCREMENTAL:NO /MACHINE:X64 /NODEFAULTLIB /STACK:0xA00000,0xA00000 /SUBSYSTEM:CONSOLE /OPT:REF,ICF=1 /WX kernel32.lib user32.lib Ws2_32.lib  
+set LinkFlags= /INCREMENTAL:NO /MACHINE:X64 /NODEFAULTLIB /STACK:0x100000,0x100000 /SUBSYSTEM:CONSOLE /WX kernel32.lib user32.lib Ws2_32.lib  
 
 REM kernel32.lib user32.lib gdi32.lib shell32.lib Shlwapi.lib
 REM libucrt.lib libvcruntime.lib libcmt.lib 
@@ -32,6 +33,7 @@ goto START_COMPILE
 
 :RELEASE_FLAGS
 set CompilerFlags=%CompilerFlags%  -Zo -Zi -O2
+set LinkFlags=%LinkFlags% /OPT:REF,ICF=1
 
 :START_COMPILE
 

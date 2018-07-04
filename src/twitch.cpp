@@ -8,7 +8,7 @@ twitch_wait_to_not_get_banned(f64 wallClockInSeconds)
 {
     LOCAL_STATIC f64 lastTime = 0;
     
-    f64 diffMs = (1000.0 * wallClockInSeconds) - (1000.0 * lastTime);
+     f64 diffMs = (1000.0 * wallClockInSeconds) - (1000.0 * lastTime);
     
     // 300 bc mods can send 100 msgs in 30s to twitch w/o being global'd
     if (diffMs < 300.0)

@@ -183,7 +183,7 @@ void* memset(void* dst, int32_t val, size_t numBytes)
 __forceinline void* 
 memcpy_sse2(char* dst, char* src, size_t numBytes)
 {
-    const register int64_t sseSize = sizeof(__m128i);
+    const register uint32_t sseSize = sizeof(__m128i);
     
     int bytesPerCopy = 1;
     if (((uintptr_t)dst % sseSize) != ((uintptr_t)src % sseSize))

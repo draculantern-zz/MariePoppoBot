@@ -34,12 +34,6 @@ struct StringReader
 };
 #define WHOLE_STRING -1
 
-enum StringReaderDirection
-{
-    STRING_READER_FORWARD   = 0,
-    STRING_READER_BACKWARDS = 1
-};
-
 enum NewLineType
 {
     LINE_FEED       = 0x1,
@@ -74,43 +68,8 @@ FUNCTION void append(String* s, void* ptr);
 
 FUNCTION bool32 string_is_null_or_empty(const String* s);
 FUNCTION bool32 string_is_null_or_whitespace(const String* s);
-
-FUNCTION inline StringReader make_string_reader(char* string, 
-                                                s32 readLength = WHOLE_STRING);
-FUNCTION inline StringReader make_string_reader(const char* string,
-                                                s32 readLength = WHOLE_STRING)
-{ return make_string_reader((char*)string, readLength); }
-FUNCTION inline char* string_at_reader_cursor(StringReader* reader)
-{ return reader->string + reader->cursor; }
-FUNCTION inline char   char_at_cursor(StringReader* sr);
-FUNCTION inline char   next_char(StringReader* sr);
-FUNCTION inline char   prev_char(StringReader* sr);
-FUNCTION inline s32    seek_to_beginning(StringReader* sr);
-FUNCTION inline s32    seek_to_end(StringReader* sr);
-FUNCTION inline bool32 at_beginning(StringReader* sr);
-FUNCTION inline bool32 at_end(StringReader* sr);
-FUNCTION inline bool32 valid_index(StringReader *sr, s32 index);
-FUNCTION s32 seek_next_char(StringReader* sr, char c,
-                            StringReaderDirection dir = STRING_READER_FORWARD);
-FUNCTION s32 seek_next_string(StringReader* sr, const char* s,
-                              StringReaderDirection dir = STRING_READER_FORWARD);
-FUNCTION s32 seek_next_string(StringReader* sr, const String* s, 
-                              StringReaderDirection dir = STRING_READER_FORWARD);
-FUNCTION s32 seek_past_whitespace(StringReader* sr,
-                                  StringReaderDirection dir = STRING_READER_FORWARD);
-FUNCTION s32 seek_next_whitespace(StringReader* sr,
-                                  StringReaderDirection dir = STRING_READER_FORWARD);
-FUNCTION s32 seek_next_alpha(StringReader* sr,
-                             StringReaderDirection dir = STRING_READER_FORWARD);
-FUNCTION s32 seek_next_number(StringReader* sr,
-                              StringReaderDirection dir = STRING_READER_FORWARD);
-FUNCTION s32 seek_next_alphanumeric(StringReader* sr,
-                                    StringReaderDirection dir = STRING_READER_FORWARD);
-FUNCTION s32 seek_next_non_alphanumeric(StringReader* sr,
-                                        StringReaderDirection dir = STRING_READER_FORWARD);
-FUNCTION s32 seek_next_line(StringReader* sr,
-                            NewLineType newLineType = END_OF_LINE,
-                            StringReaderDirection dir = STRING_READER_FORWARD);
+FUNCTION bool32 string_is_null_or_empty(const char* s);
+FUNCTION bool32 string_is_null_or_whitespace(const char* s);
 
 // @TODO utf8 variants (utf8_is_upper, etc)
 FUNCTION inline bool32 char_is_upper(char c);
@@ -123,77 +82,169 @@ FUNCTION inline bool32 char_is_alpha(char c);
 FUNCTION inline bool32 char_is_alphanumeric(char c);
 FUNCTION inline bool32 char_equals_ignore_case(char a, char b);
 
-FUNCTION bool32        equals(const char* a, const char* b);
-FUNCTION inline bool32 equals(String* a, String* b);
-FUNCTION inline bool32 equals(const char* a, String* b);
-FUNCTION inline bool32 equals(String* a, const char* b);
+FUNCTION bool32 equals(const String* a, const String* b);
+FUNCTION bool32 equals(const String* a, const char* b);
+FUNCTION inline bool32 equals(const char* a, const String* b);
+FUNCTION bool32 equals(const char* a, const char* b);
 
-FUNCTION bool32        equals_ignore_case(const char* a, const char* b);
-FUNCTION inline bool32 equals_ignore_case(String* a, String* b);
-FUNCTION inline bool32 equals_ignore_case(const char* a, String* b);
-FUNCTION inline bool32 equals_ignore_case(String* a, const char* b);
+FUNCTION bool32 equals_ignore_case(const String* a, const String* b);
+FUNCTION bool32 equals_ignore_case(const String* a, const char* b);
+FUNCTION inline bool32 equals_ignore_case(const char* a, const String* b);
+FUNCTION bool32 equals_ignore_case(const char* a, const char* b);
 
-FUNCTION bool32        match_nbytes(const char* a, const char* b, s32 nbytes);
-FUNCTION inline bool32 match(String* a, String* b);
-FUNCTION inline bool32 match(const char* a, String* b);
-FUNCTION inline bool32 match(String* a, const char* b);
-FUNCTION inline bool32 match(const char* a, const char* b);
+FUNCTION bool32 match(const String* a, const String* b);
+FUNCTION bool32 match(const String* a, const char* b);
+FUNCTION inline bool32 match(const char* a, const String* b);
+FUNCTION bool32 match(const char* a, const char* b);
 
-FUNCTION bool32        match_nbytes_ignore_case(const char* a, const char* b, s32 nbytes);
-FUNCTION inline bool32 match_ignore_case(const String* a, const String* b);
+FUNCTION bool32 match_ignore_case(const String* a, const String* b);
+FUNCTION bool32 match_ignore_case(const String* a, const char* b);
 FUNCTION inline bool32 match_ignore_case(const char* a, const String* b);
-FUNCTION inline bool32 match_ignore_case(const String* a, const char* b);
-FUNCTION inline bool32 match_ignore_case(const char* a, const char* b);
+FUNCTION bool32 match_ignore_case(const char* a, const char* b);
 
-FUNCTION s32        find_in_nbytes(const char* s,     s32 seekLen, 
-                                   const char* thing, s32 thingLen);
-FUNCTION s32        find(const String* s, char c);
-FUNCTION s32        find(const char* s, char c);
-FUNCTION inline s32 find(const String* s, const char* thing);
-FUNCTION inline s32 find(const char* s,   const String* thing);
+FUNCTION s32 find(const String* s, s32 start, char c);
+FUNCTION s32 find(const char* s, s32 start, char c);
+FUNCTION s32 find(const String* s, s32 start, const String* thing);
+FUNCTION s32 find(const String* s, s32 start, const char* thing);
+FUNCTION s32 find(const char* s, s32 start, const String* thing);
+FUNCTION s32 find(const char* s, s32 start, const char* thing);
+
+FUNCTION inline s32 find(const String* s, char c);
+FUNCTION inline s32 find(const char* s, char c);
 FUNCTION inline s32 find(const String* s, const String* thing);
-FUNCTION inline s32 find(const char* s,   const char* thing);
+FUNCTION inline s32 find(const String* s, const char* thing);
+FUNCTION inline s32 find(const char* s, const String* thing);
+FUNCTION inline s32 find(const char* s, const char* thing);
 
-FUNCTION s32        find_in_nbytes_ignore_case(const char* s,     s32 seekLen, 
-                                               const char* thing, s32 thingLen);
-FUNCTION inline s32 find_ignore_case(const String* s, const char* thing);
-FUNCTION inline s32 find_ignore_case(const char* s,   const String* thing);
+FUNCTION s32 find_ignore_case(const String* s, s32 start, char c);
+FUNCTION s32 find_ignore_case(const char* s, s32 start, char c);
+FUNCTION s32 find_ignore_case(const String* s, s32 start, const String* thing);
+FUNCTION s32 find_ignore_case(const String* s, s32 start, const char* thing);
+FUNCTION s32 find_ignore_case(const char* s, s32 start, const String* thing);
+FUNCTION s32 find_ignore_case(const char* s, s32 start, const char* thing);
+
+FUNCTION inline s32 find_ignore_case(const String* s, char c);
+FUNCTION inline s32 find_ignore_case(const char* s, char c);
 FUNCTION inline s32 find_ignore_case(const String* s, const String* thing);
-FUNCTION inline s32 find_ignore_case(const char* s,   const char* thing);
+FUNCTION inline s32 find_ignore_case(const String* s, const char* thing);
+FUNCTION inline s32 find_ignore_case(const char* s, const String* thing);
+FUNCTION inline s32 find_ignore_case(const char* s, const char* thing);
 
 FUNCTION inline bool32 contains(const String* s, char c);
 FUNCTION inline bool32 contains(const char* s, char c);
+FUNCTION inline bool32 contains(const String* s, const String* thing);
 FUNCTION inline bool32 contains(const String* s, const char* thing);
-FUNCTION inline bool32 contains(const char* s,   String* thing);
-FUNCTION inline bool32 contains(const String* s, String* thing);
+FUNCTION inline bool32 contains(const char* s,   const String* thing);
 FUNCTION inline bool32 contains(const char* s,   const char* thing);
 
+FUNCTION inline bool32 contains_ignore_case(const String* s, String* thing);
 FUNCTION inline bool32 contains_ignore_case(const String* s, const char* thing);
 FUNCTION inline bool32 contains_ignore_case(const char* s,   String* thing);
-FUNCTION inline bool32 contains_ignore_case(const String* s, String* thing);
 FUNCTION inline bool32 contains_ignore_case(const char* s,   const char* thing);
 
-FUNCTION void           to_lower(String* s);
-FUNCTION void           to_upper(String* s);
-FUNCTION void           to_lower(char* s);
-FUNCTION void           to_upper(char* s);
-FUNCTION void           trim_whitespace(String* s);
+FUNCTION void to_lower(String* s);
+FUNCTION void to_upper(String* s);
+FUNCTION void to_lower(char* s);
+FUNCTION void to_upper(char* s);
+FUNCTION void trim_whitespace(String* s);
+
+FUNCTION inline StringReader make_string_reader(char* string, 
+                                                s32 readLength = WHOLE_STRING);
+FUNCTION inline StringReader make_string_reader(const char* string,
+                                                s32 readLength = WHOLE_STRING)
+{ return make_string_reader((char*)string, readLength); }
+
+FUNCTION inline char* string_at_reader_cursor(StringReader* reader)
+{ return reader->string + reader->cursor; }
+
+FUNCTION inline char   char_at_cursor(StringReader* sr);
+FUNCTION inline char   next_char(StringReader* sr);
+FUNCTION inline char   prev_char(StringReader* sr);
+FUNCTION inline s32    seek_to_beginning(StringReader* sr);
+FUNCTION inline s32    seek_to_end(StringReader* sr);
+FUNCTION inline bool32 reader_at_beginning(StringReader* sr);
+FUNCTION inline bool32 reader_at_end(StringReader* sr);
+FUNCTION inline bool32 valid_index(StringReader *sr, s32 index);
+FUNCTION s32 seek_next_char(StringReader* sr, char c);
+FUNCTION s32 seek_next_string(StringReader* sr, const char* s);
+FUNCTION s32 seek_next_string(StringReader* sr, const String* s);
+FUNCTION s32 seek_past_whitespace(StringReader* sr);
+FUNCTION s32 seek_next_whitespace(StringReader* sr);
+FUNCTION s32 seek_next_alpha(StringReader* sr);
+FUNCTION s32 seek_next_number(StringReader* sr);
+FUNCTION s32 seek_next_alphanumeric(StringReader* sr);
+FUNCTION s32 seek_next_non_alphanumeric(StringReader* sr);
+FUNCTION s32 seek_next_line(StringReader* sr,
+                            NewLineType newLineType = END_OF_LINE);
 
 FUNCTION u64 parse_u64(const String* s);
 FUNCTION u64 parse_u64(const char* s);
 
 
-#pragma region Inline String Functions
+
+FUNCTION inline bool32 
+char_is_upper(char c)
+{
+    return (c >= 'A') && (c <= 'Z');
+}
+
+FUNCTION inline bool32 
+char_is_lower(char c)
+{
+    return (c >= 'a') && (c <= 'z');
+}
+
+FUNCTION inline char 
+char_to_upper(char c)
+{
+    return char_is_lower(c) ? (c + ('A' - 'a')) : (c); 
+}
+
+FUNCTION inline char
+char_to_lower(char c)
+{
+    // @NOTE must use -('A'-'a') instead of +('a'-'A') because there is no guarantee
+    //       that char is a signed number, if its unsigned we risk overflow
+    return char_is_upper(c) ? (c - ('A' - 'a')) : (c); 
+}
+
+FUNCTION inline bool32
+char_is_whitespace(char c)
+{
+    return (c == ' ') || (c == '\t') || (c == '\n') || (c == '\r');
+}
+
+FUNCTION inline bool32
+char_is_number(char c)
+{
+    return (c >= '0') && (c <= '9');
+}
+
+FUNCTION inline bool32
+char_is_alpha(char c)
+{
+    return char_is_upper(c) || char_is_lower(c);
+}
+
+FUNCTION inline bool32
+char_is_alphanumeric(char c)
+{
+    return char_is_number(c) || char_is_alpha(c) || (c == '_');
+}
+
+FUNCTION inline bool32 
+char_equals_ignore_case(char a, char b)
+{
+    return char_to_upper(a) == char_to_upper(b);
+}
 
 FUNCTION inline StringReader 
 make_string_reader(char* string, s32 readLength)
 {
     StringReader ret;
-    
     ret.string = string;
     ret.cursor = 0;
     ret.length = (readLength == WHOLE_STRING) ? (s32)strlen(string) : readLength;
-    
     return ret;
 }
 
@@ -251,277 +302,162 @@ valid_index(StringReader *sr, s32 index)
     return (index < sr->length) && (index > -1);
 }
 
-FUNCTION inline bool32
-equals(String* a, String* b)
-{
-    if (a->length != b->length) return BOOL_FALSE;
-    return match_nbytes(a->str, b->str, (s32)a->length);
-}
-
 FUNCTION inline bool32 
-equals(const char* a, String* b)
+equals(const char* a, const String* b)
 {
-    if (strlen(a) != b->length) return BOOL_FALSE;
-    return match_nbytes(a, b->str, (s32)b->length);
-}
-
-FUNCTION inline bool32 
-equals(String* a, const char* b)
-{
-    if (a->length != strlen(b)) return BOOL_FALSE;
-    return match_nbytes(a->str, b, (s32)a->length);
+    return equals(b, a);
 }
 
 FUNCTION inline bool32
-equals_ignore_case(String* a, String* b)
+equals_ignore_case(const char* a, const String* b)
 {
-    if (a->length != b->length) return BOOL_FALSE;
-    return match_nbytes_ignore_case(a->str, b->str, (s32)a->length);
-}
-
-FUNCTION inline bool32
-equals_ignore_case(const char* a, String* b)
-{
-    if (strlen(a) != b->length) return BOOL_FALSE;
-    return match_nbytes_ignore_case(a, b->str, (s32)b->length);
-}
-
-FUNCTION inline bool32
-equals_ignore_case(String* a, const char* b)
-{
-    if (a->length != strlen(b)) return BOOL_FALSE;
-    return match_nbytes_ignore_case(a->str, b, (s32)a->length);
-}
-
-FUNCTION inline bool32 
-match(String* a, String* b)
-{
-    return match_nbytes(a->str, b->str, (s32)min(a->length, b->length));
+    return equals_ignore_case(b, a);
 }
 
 FUNCTION inline bool32 
 match(const char* a, String* b)
 {
-    auto lenA = (s32)strlen(a);
-    return match_nbytes(a, b->str, (s32)min(lenA, b->length));
-}
-
-FUNCTION inline bool32 
-match(String* a, const char* b)
-{
-    auto lenB = (s32)strlen(b);
-    return match_nbytes(a->str, b, (s32)min(a->length, lenB));
-}
-
-FUNCTION inline bool32 
-match(const char* a, const char* b)
-{
-    u32 lenA = (u32)strlen(a);
-    u32 lenB = (u32)strlen(b);
-    return match_nbytes(a, b, min(lenA, lenB));
-}
-
-FUNCTION inline bool32 
-match_ignore_case(const String* a, const String* b)
-{
-    return match_nbytes_ignore_case(a->str, b->str, (s32)min(a->length, b->length));
+    return match(b, a);
 }
 
 FUNCTION inline bool32 
 match_ignore_case(const char* a, const String* b)
 {
-    u32 lenA = (u32)strlen(a);
-    return match_nbytes_ignore_case(a, b->str, (s32)min(lenA, b->length));
+    return match_ignore_case(b, a);
 }
 
-FUNCTION inline bool32 
-match_ignore_case(const String* a, const char* b)
+FUNCTION inline s32 
+find(const String* s, char c)
 {
-    u32 lenB = (u32)strlen(b);
-    return match_nbytes_ignore_case(a->str, b, (s32)min(a->length, lenB));
+    return find(s, 0, c);
 }
 
-FUNCTION inline bool32 
-match_ignore_case(const char* a, const char* b)
+FUNCTION inline s32 
+find(const char* s, char c)
 {
-    u32 lenA = (u32)strlen(a);
-    u32 lenB = (u32)strlen(b);
-    return match_nbytes_ignore_case(a, b, min(lenA, lenB));
-}
-
-FUNCTION inline bool32 
-char_is_upper(char c)
-{
-    return (c >= 'A') && (c <= 'Z');
-}
-
-FUNCTION inline bool32 
-char_is_lower(char c)
-{
-    return (c >= 'a') && (c <= 'z');
-}
-
-FUNCTION inline char 
-char_to_upper(char c)
-{
-    return char_is_lower(c) ? (c + ('A' - 'a')) : (c); 
-}
-
-FUNCTION inline char
-char_to_lower(char c)
-{
-    // @NOTE must use -('A'-'a') instead of +('a'-'A') because there is no guarantee
-    //       that char is a signed number, if its unsigned there is a risk of overflow
-    return char_is_upper(c) ? (c - ('A' - 'a')) : (c); 
-}
-
-FUNCTION inline bool32
-char_is_whitespace(char c)
-{
-    return (c == ' ') || (c == '\t') || (c == '\n') || (c == '\r');
-}
-
-FUNCTION inline bool32
-char_is_number(char c)
-{
-    return (c >= '0') && (c <= '9');
-}
-
-FUNCTION inline bool32
-char_is_alpha(char c)
-{
-    return char_is_upper(c) || char_is_lower(c);
-}
-
-FUNCTION inline bool32
-char_is_alphanumeric(char c)
-{
-    return char_is_number(c) || char_is_alpha(c) || (c == '_');
-}
-
-FUNCTION inline bool32 
-char_equals_ignore_case(char a, char b)
-{
-    return char_to_upper(a) == char_to_upper(b);
-}
-
-FUNCTION inline s32
-find(const String* s, const char* thing)
-{
-    s32 lenThing = (s32)strlen(thing);
-    return find_in_nbytes(s->str, s->length, thing, lenThing);
-}
-
-FUNCTION inline s32
-find(const char* s, const String* thing)
-{
-    s32 lenS = (s32)strlen(s);
-    return find_in_nbytes(s, lenS, thing->str, thing->length);
+    return find(s, 0, c);
 }
 
 FUNCTION inline s32
 find(const String* s, const String* thing)
 {
-    return find_in_nbytes(s->str, s->length, thing->str, thing->length);
+    return find(s, 0, thing);
+}
+
+FUNCTION inline s32
+find(const String* s, const char* thing)
+{
+    return find(s, 0, thing);
+}
+
+FUNCTION inline s32
+find(const char* s, const String* thing)
+{
+    return find(s, 0, thing);
 }
 
 FUNCTION inline s32
 find(const char* s, const char* thing)
 {
-    s32 lenS = (s32)strlen(s);
-    s32 lenThing = (s32)strlen(thing);
-    return find_in_nbytes(s, lenS, thing, lenThing);
+    return find(s, 0, thing);
 }
 
-FUNCTION inline s32
-find_ignore_case(const String* s, const char* thing)
+FUNCTION inline s32 
+find_ignore_case(const String* s, char c)
 {
-    s32 lenThing = (s32)strlen(thing);
-    return find_in_nbytes_ignore_case(s->str, s->length, thing, lenThing);
+    return find_ignore_case(s, 0, c);
 }
 
-FUNCTION inline s32
-find_ignore_case(const char* s, const String* thing)
+FUNCTION inline s32 
+find_ignore_case(const char* s, char c)
 {
-    s32 lenS = (s32)strlen(s);
-    return find_in_nbytes_ignore_case(s, lenS, thing->str, thing->length);
+    return find_ignore_case(s, 0, c);
 }
 
 FUNCTION inline s32
 find_ignore_case(const String* s, const String* thing)
 {
-    return find_in_nbytes_ignore_case(s->str, s->length, thing->str, thing->length);
+    return find_ignore_case(s, 0, thing);
+}
+
+FUNCTION inline s32
+find_ignore_case(const String* s, const char* thing)
+{
+    return find_ignore_case(s, 0, thing);
+}
+
+FUNCTION inline s32
+find_ignore_case(const char* s, const String* thing)
+{
+    return find_ignore_case(s, 0, thing);
 }
 
 FUNCTION inline s32
 find_ignore_case(const char* s, const char* thing)
 {
-    s32 lenS = (s32)strlen(s);
-    s32 lenThing = (s32)strlen(thing);
-    return find_in_nbytes_ignore_case(s, lenS, thing, lenThing);
+    return find_ignore_case(s, 0, thing);
 }
 
 FUNCTION inline bool32
 contains(const String* s, char c)
 {
-    return -1 != find(s, c);
+    return -1 != find(s, 0, c);
 }
 
 FUNCTION inline bool32
 contains(const char* s, char c)
 {
-    return -1 != find(s, c);
+    return -1 != find(s, 0, c);
 }
 
 FUNCTION inline bool32 
 contains(const String* s, const char* thing)
 {
-    return -1 != find(s, thing);
+    return -1 != find(s, 0, thing);
 }
 
 FUNCTION inline bool32
 contains(const char* s, String* thing)
 {
-    return -1 != find(s, thing);
+    return -1 != find(s, 0, thing);
 }
 
 FUNCTION inline bool32
 contains(const String* s, String* thing)
 {
-    return -1 != find(s, thing);
+    return -1 != find(s, 0, thing);
 }
 
 FUNCTION inline bool32
 contains(const char* s, const char* thing)
 {
-    return -1 != find(s, thing);
+    return -1 != find(s, 0, thing);
 }
 
 FUNCTION inline bool32
 contains_ignore_case(const String* s, const char* thing)
 {
-    return -1 != find_ignore_case(s, thing);
+    return -1 != find_ignore_case(s, 0, thing);
 }
 
 FUNCTION inline bool32
 contains_ignore_case(const char* s, String* thing)
 {
-    return -1 != find_ignore_case(s, thing);
+    return -1 != find_ignore_case(s, 0, thing);
 }
 
 FUNCTION inline bool32
 contains_ignore_case(const String* s, String* thing)
 {
-    return -1 != find_ignore_case(s, thing);
+    return -1 != find_ignore_case(s, 0, thing);
 }
 
 FUNCTION inline bool32 
 contains_ignore_case(const char* s, const char* thing)
 {
-    return -1 != find_ignore_case(s, thing);
+    return -1 != find_ignore_case(s, 0, thing);
 }
 
-#pragma endregion
 
 //
 // static implementations of my string library
@@ -858,8 +794,6 @@ append(String* s, void* ptr)
     append_nchars(s, buf, temp_cursor);    
 }
 
-#undef MIN_ALLOCATED
-
 FUNCTION bool32
 string_is_null_or_empty(const String* s)
 {
@@ -872,7 +806,7 @@ string_is_null_or_whitespace(const String* s)
     if (string_is_null_or_empty(s)) return BOOL_TRUE;
     for(s32 i = 0; i < s->length; ++i)
     {
-        if (!char_is_whitespace(s->str[0])) return BOOL_FALSE;
+        if (!char_is_whitespace(s->str[i])) return BOOL_FALSE;
     }
     return BOOL_TRUE;
 }
@@ -894,525 +828,331 @@ string_is_null_or_whitespace(const char* s)
     return BOOL_TRUE;
 }
 
-FUNCTION s32
-seek_next_char(StringReader* sr, char c, StringReaderDirection dir)
+// @TODO unroll loops??
+FUNCTION bool32
+equals(const String* a, const String* b)
 {
-    register s32 nextCursor;
-    switch (dir)
+    if (a->length != b->length) return BOOL_FALSE;
+    for(s32 i = 0; i < a->length; ++i)
     {
-        case STRING_READER_FORWARD:
-        {
-            if (sr->cursor >= sr->length)
-            {
-                sr->cursor = sr->length;
-                return sr->length;
-            }
-            
-            nextCursor = max(0, sr->cursor);
-            while (nextCursor < sr->length && 
-                   sr->string[nextCursor] != c)
-            {
-                ++nextCursor;
-            }
-            sr->cursor = min(nextCursor + 1, sr->length); 
-        } break;
-        
-        case STRING_READER_BACKWARDS: 
-        {
-            if (sr->cursor <= -1)
-            {
-                sr->cursor = -1;
-                return -1;
-            }
-            
-            nextCursor = min(sr->length - 1, sr->cursor);
-            while (nextCursor > -1 && 
-                   sr->string[nextCursor] != c)
-            {
-                --nextCursor;
-            }
-            sr->cursor = max(nextCursor - 1, -1);
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking through a string with invalid direction designator");
-            return -1;
-        } break;
+        if (a->str[i] != b->str[i]) return BOOL_FALSE;
     }
-    return nextCursor;
+    return BOOL_TRUE;
 }
 
-FUNCTION s32
-seek_next_string(StringReader* sr, const char* s, StringReaderDirection dir)
+FUNCTION bool32 
+equals(const String* a, const char* b)
 {
-    register s32 seekLength = (s32)strlen(s);
-    register s32 nextCursor;
-    switch (dir)
+    s32 i = 0;
+    for(; i < a->length; ++i)
     {
-        case STRING_READER_FORWARD:
-        {
-            if (sr->cursor >= sr->length)
-            {
-                sr->cursor = sr->length;
-                return sr->length;
-            }
-            
-            nextCursor = max(0, sr->cursor);
-            while (nextCursor < sr->length - (seekLength - 1) && 
-                   !match_nbytes(sr->string + nextCursor, s, seekLength))
-            {
-                ++nextCursor;
-            }
-            // if not found
-            if (!(nextCursor < sr->length - (seekLength - 1))) 
-                nextCursor = sr->length;
-            sr->cursor = min(nextCursor + seekLength, sr->length);
-        } break;
-        
-        case STRING_READER_BACKWARDS:
-        {
-            if (sr->cursor < 0)
-            {
-                sr->cursor = -1;
-                return -1;
-            }
-            
-            nextCursor = min(sr->cursor, sr->length - seekLength);
-            while (nextCursor > -1 &&
-                   !match_nbytes(sr->string + nextCursor, s, seekLength))
-            {
-                --nextCursor;
-            }
-            // if not found
-            if (!(nextCursor > -1))
-                nextCursor = -1;
-            sr->cursor = max(nextCursor - 1, -1);
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking through a string with invalid direction designator");
-            return -1;
-        } break;
+        if (a->str[i] != b[i]) return BOOL_FALSE;
     }
-    return nextCursor;
-}
-
-FUNCTION s32
-seek_next_string(StringReader* sr, const String* s, StringReaderDirection dir)
-{
-    register s32 seekLength = s->length;
-    register s32 nextCursor;
-    switch (dir)
-    {
-        case STRING_READER_FORWARD:
-        {
-            if (sr->cursor > sr->length - seekLength)
-            {
-                sr->cursor = sr->length;
-                return sr->length;
-            }
-            
-            nextCursor = sr->cursor;
-            while (nextCursor < sr->length - (seekLength - 1) && 
-                   !match_nbytes(sr->string + nextCursor, s->str, seekLength))
-            {
-                ++nextCursor;
-            }
-            // if not found
-            if (!(nextCursor < sr->length - (seekLength - 1))) 
-                nextCursor = sr->length;
-            sr->cursor = min(nextCursor + seekLength, sr->length);
-        } break;
-        
-        case STRING_READER_BACKWARDS:
-        {
-            if (sr->cursor < 0)
-            {
-                sr->cursor = -1;
-                return -1;
-            }
-            
-            nextCursor = min(sr->cursor, sr->length - seekLength);
-            while (nextCursor > -1 &&
-                   !match_nbytes(sr->string + nextCursor, s->str, seekLength))
-            {
-                --nextCursor;
-            }
-            // if not found
-            if (!(nextCursor > -1))
-                nextCursor = -1;
-            sr->cursor = max(nextCursor - 1, -1);
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking through a string with invalid direction designator");
-            return -1;
-        } break;
-    }
-    return nextCursor;
-}
-
-FUNCTION s32
-seek_past_whitespace(StringReader* sr, StringReaderDirection dir)
-{
-    switch (dir)
-    {
-        case STRING_READER_FORWARD:
-        {
-            while (sr->cursor < sr->length &&
-                   char_is_whitespace(sr->string[sr->cursor]))
-            {
-                sr->cursor++;
-            }
-        } break;
-        
-        case STRING_READER_BACKWARDS:
-        {
-            while (sr->cursor > -1 &&
-                   char_is_whitespace(sr->string[sr->cursor]))
-            {
-                sr->cursor--;
-            }
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking through a string with invalid direction designator");
-            return -1;
-        } break;
-    }
-    return sr->cursor;
-}
-
-FUNCTION s32
-seek_next_whitespace(StringReader* sr, StringReaderDirection dir)
-{
-    register s32 nextCursor;
-    switch (dir)
-    {
-        case STRING_READER_FORWARD:
-        {
-            if (sr->cursor >= sr->length)
-            {
-                sr->cursor = sr->length;
-                return sr->length;
-            }
-            
-            nextCursor = max(0, sr->cursor);
-            while (nextCursor < sr->length && 
-                   !char_is_whitespace(sr->string[nextCursor]))
-            {
-                ++nextCursor;
-            }
-            sr->cursor = min(nextCursor + 1, sr->length); 
-        } break;
-        
-        case STRING_READER_BACKWARDS: 
-        {
-            if (sr->cursor <= -1)
-            {
-                sr->cursor = -1;
-                return -1;
-            }
-            
-            nextCursor = min(sr->length - 1, sr->cursor);
-            while (nextCursor > -1 && 
-                   !char_is_whitespace(sr->string[nextCursor]))
-            {
-                --nextCursor;
-            }
-            sr->cursor = max(nextCursor - 1, -1);
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking through a string with invalid direction designator");
-            return -1;
-        } break;
-    }
-    return nextCursor;
-}
-
-FUNCTION s32
-seek_next_alpha(StringReader* sr, StringReaderDirection dir)
-{
-    register s32 nextCursor = sr->cursor;
-    switch (dir)
-    {
-        case STRING_READER_FORWARD:
-        {
-            while (nextCursor < sr->length &&
-                   !char_is_alpha(sr->string[nextCursor]))
-            {
-                nextCursor++;
-            }
-            sr->cursor = min(nextCursor + 1, sr->length);
-        } break;
-        
-        case STRING_READER_BACKWARDS:
-        {
-            while (nextCursor > -1 &&
-                   !char_is_alpha(sr->string[nextCursor]))
-            {
-                nextCursor--;
-            }
-            sr->cursor = max(nextCursor - 1, -1);
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking through a string with invalid direction designator");
-            return -1;
-        } break;
-    }
-    return nextCursor;
-}
-
-FUNCTION s32
-seek_next_number(StringReader* sr, StringReaderDirection dir)
-{
-    register s32 nextCursor = sr->cursor;
-    switch (dir)
-    {
-        case STRING_READER_FORWARD:
-        {
-            while (nextCursor < sr->length &&
-                   !char_is_number(sr->string[nextCursor]))
-            {
-                sr->cursor++;
-            }
-            sr->cursor = min(nextCursor + 1, sr->length);
-        } break;
-        
-        case STRING_READER_BACKWARDS:
-        {
-            while (nextCursor > -1 &&
-                   !char_is_number(sr->string[nextCursor]))
-            {
-                nextCursor--;
-            }
-            sr->cursor = max(nextCursor - 1, -1);
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking through a string with invalid direction designator");
-            return -1;
-        } break;
-    }
-    return nextCursor;
-}
-
-FUNCTION s32 
-seek_next_alphanumeric(StringReader* sr, StringReaderDirection dir)
-{
-    register s32 nextCursor = sr->cursor;
-    switch (dir)
-    {
-        case STRING_READER_FORWARD:
-        {
-            while (nextCursor < sr->length &&
-                   !char_is_alphanumeric(sr->string[nextCursor]))
-            {
-                nextCursor++;
-            }
-            sr->cursor = min(nextCursor + 1, sr->length);
-        } break;
-        
-        case STRING_READER_BACKWARDS:
-        {
-            while (nextCursor > -1 &&
-                   !char_is_alphanumeric(sr->string[nextCursor]))
-            {
-                nextCursor--;
-            }
-            sr->cursor = max(nextCursor - 1, -1);
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking through a string with invalid direction designator");
-            return -1;
-        } break;
-    }
-    return nextCursor;
-}
-
-FUNCTION s32
-seek_next_non_alphanumeric(StringReader* sr, StringReaderDirection dir)
-{
-    register s32 nextCursor = sr->cursor;
-    switch (dir)
-    {
-        case STRING_READER_FORWARD:
-        {
-            while (nextCursor < sr->length &&
-                   char_is_alphanumeric(sr->string[nextCursor]))
-            {
-                nextCursor++;
-            }
-            sr->cursor = min(nextCursor + 1, sr->length);
-        } break;
-        
-        case STRING_READER_BACKWARDS:
-        {
-            while (nextCursor > -1 &&
-                   char_is_alphanumeric(sr->string[nextCursor]))
-            {
-                nextCursor--;
-            }
-            sr->cursor = max(nextCursor - 1, -1);
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking through a string with invalid direction designator");
-            return -1;
-        } break;
-    }
-    return nextCursor;
-}
-
-FUNCTION s32
-seek_next_line(StringReader* sr, NewLineType newLineType, StringReaderDirection dir)
-{
-    switch (newLineType)
-    {
-        case CARRIAGE_RETURN:
-        {
-            seek_next_char(sr, '\r', dir);
-        } break;
-        
-        case LINE_FEED:
-        {
-            seek_next_char(sr, '\n', dir);
-        } break;
-        
-        case END_OF_LINE:
-        {
-            seek_next_string(sr, "\r\n", dir);
-        } break;
-        
-        default:
-        {
-            assert_msg(0, "Tried seeking a string for a newline character, "
-                       "but asked for an invalid newline type");
-            return -1;
-        } break;
-    }
-    return sr->cursor;
+    if (!b[i]) return BOOL_FALSE;
+    return BOOL_TRUE;
 }
 
 FUNCTION bool32 
 equals(const char* a, const char* b)
 {
-    size_t lenA = strlen(a);
-    size_t lenB = strlen(b);
-    if (lenA != lenB) return BOOL_FALSE;
-    return match_nbytes(a, b, (s32)lenA);
+    for(s32 i = 0; ; ++i)
+    {
+        if (a[i] != b[i]) return BOOL_FALSE;
+        if (!a[i]) return BOOL_TRUE;
+    }
+}
+
+FUNCTION bool32
+equals_ignore_case(const String* a, const String* b)
+{
+    if (a->length != b->length) return BOOL_FALSE;
+    for(s32 i = 0; i < a->length; ++i)
+    {
+        if (!char_equals_ignore_case(a->str[i], b->str[i])) return BOOL_FALSE;
+    }
+    return BOOL_TRUE;
+}
+
+FUNCTION bool32
+equals_ignore_case(const String* a, const char* b)
+{
+    s32 i = 0;
+    for(; i < a->length; ++i)
+    {
+        if (!char_equals_ignore_case(a->str[i], b[i])) return BOOL_FALSE;
+    }
+    if (!b[i]) return BOOL_FALSE;
+    return BOOL_TRUE;
 }
 
 FUNCTION bool32
 equals_ignore_case(const char* a, const char* b)
 {
-    size_t lenA = strlen(a);
-    size_t lenB = strlen(b);
-    if (lenA != lenB) return BOOL_FALSE;
-    return match_nbytes_ignore_case(a, b, (s32)lenA);
+    for(s32 i = 0; ; ++i)
+    {
+        if (!char_equals_ignore_case(a[i], b[i])) return BOOL_FALSE;
+        if (!a[i]) return BOOL_TRUE;
+    }
 }
 
 FUNCTION bool32 
-match_nbytes(const char* a, const char* b, s32 nbytes)
+match(const String* a, const String* b)
 {
-    s32 bytesPerCompare = 1;
-    if (nbytes >= 16 && ((uptr)a % 16) == ((uptr)b % 16))
+    for(s32 i = 0; (i < a->length) && (i < b->length); ++i)
     {
-        bytesPerCompare = 16;
+        if (a->str[i] != b->str[i]) return BOOL_FALSE;
     }
-    else if (nbytes >= 8 && ((uptr)a % 8) == ((uptr)b % 8))
-    {
-        bytesPerCompare = 8;
-    }
-    else if (nbytes >= 4 && ((uptr)a % 4) == ((uptr)b % 4))
-    {
-        bytesPerCompare = 4;
-    }
-    
-    size_t extraFront = (1 == bytesPerCompare) ? 
-        nbytes : ((uptr)a) % bytesPerCompare;
-    size_t sseCount = (nbytes - extraFront) / bytesPerCompare;
-    size_t extraBack = nbytes - (sseCount * bytesPerCompare) - extraFront;
-    
-    { 
-        while (extraFront--) 
-        {
-            if (*a != *b) return BOOL_FALSE;
-            a++; b++;
-        }
-    }
-    
-    if (16 == bytesPerCompare)
-    {
-        for (register size_t sseIt = 0; sseIt < sseCount; ++sseIt) 
-        {
-            __m128i xmmA = _mm_load_si128((__m128i*)a);
-            __m128i xmmB = _mm_load_si128((__m128i*)b);
-            
-            int equalityMask = _mm_movemask_epi8(_mm_cmpeq_epi8(xmmA, xmmB));
-            
-            if (equalityMask != 0xFFFF) return BOOL_FALSE;
-            
-            a += 16; b += 16;
-        }
-    }
-    else if (8 == bytesPerCompare)
-    {
-        for (register size_t sseIt = 0; sseIt < sseCount; ++sseIt) 
-        {
-            register u64 a64 = *(u64*)a;
-            register u64 b64 = *(u64*)b;
-            
-            if (a64 != b64) return BOOL_FALSE;
-            
-            a += 8; b += 8;
-        }
-    }
-    else if (4 == bytesPerCompare)
-    {
-        for (register size_t sseIt = 0; sseIt < sseCount; ++sseIt) 
-        {
-            register u32 a32 = *(u32*)a;
-            register u32 b32 = *(u32*)b;
-            
-            if (a32 != b32) return BOOL_FALSE;
-            
-            a += 4; b += 4;
-        }
-    }
-    
-    { 
-        while (extraBack--) 
-        {
-            if (*a != *b) return BOOL_FALSE;
-            a++; b++;
-        }
-    }
-    
     return BOOL_TRUE;
 }
 
 FUNCTION bool32 
-match_nbytes_ignore_case(const char* a, const char* b, s32 nbytes)
+match(const String* a, const char* b)
 {
-    for(s32 i = 0; i < nbytes; ++i)
+    for(s32 i = 0; i < a->length; ++i)
     {
-        if (!char_equals_ignore_case(a[i], b[i]))
-            return BOOL_FALSE;
+        if (!b[i]) return BOOL_TRUE;
+        if (a->str[i] != b[i]) return BOOL_FALSE;
     }
     return BOOL_TRUE;
+}
+
+FUNCTION bool32 
+match(const char* a, const char* b)
+{
+    for(s32 i = 0; /* go forever */; ++i)
+    {
+        if (!(a[i] && b[i])) return BOOL_TRUE;
+        if (a[i] != b[i]) return BOOL_FALSE;
+    }
+}
+
+FUNCTION bool32 
+match_ignore_case(const String* a, const String* b)
+{
+    for(s32 i = 0; (i < a->length) && (i < b->length); ++i)
+    {
+        if (!char_equals_ignore_case(a->str[i], b->str[i])) return BOOL_FALSE;
+    }
+    return BOOL_TRUE;
+}
+
+FUNCTION bool32 
+match_ignore_case(const String* a, const char* b)
+{
+    for(s32 i = 0; i < a->length; ++i)
+    {
+        if (!b[i]) return BOOL_TRUE;
+        if (!char_equals_ignore_case(a->str[i], b[i])) return BOOL_FALSE;
+    }
+    return BOOL_TRUE;
+}
+
+FUNCTION bool32 
+match_ignore_case(const char* a, const char* b)
+{
+    for(s32 i = 0; /* go forever */; ++i)
+    {
+        if (!(a[i] && b[i])) return BOOL_TRUE;
+        if (!char_equals_ignore_case(a[i], b[i])) return BOOL_FALSE;
+    }
+}
+
+FUNCTION s32
+find(const String* s, s32 start, char c)
+{
+    if (start >= s->length) return -1;
+    for_str(s->str + start)
+    {
+        if (*it == c) return (s32)(it - s->str);
+    }
+    return -1;
+}
+
+FUNCTION s32
+find(const char* s, s32 start, char c)
+{
+    for_str(s + start)
+    {
+        if (*it == c) return (s32)(it - s);
+    }
+    return -1;
+}
+
+FUNCTION s32 
+find(const String* s, s32 start, const String* thing)
+{
+    if (thing->length > s->length) return -1;
+    s32 seekDist = s->length - thing->length;
+    for(s32 i = start; i < seekDist; ++i)
+    {
+        if (s->str[i] == thing->str[0])
+        {
+            s32 j = 1;
+            while(j < thing->length && 
+                  s->str[i+j] == thing->str[j]) 
+            {
+                ++j;
+            }
+            if (j == thing->length) return i;
+        }
+    }
+    return -1;
+}
+
+FUNCTION s32 
+find(const String* s, s32 start, const char* thing)
+{
+    for(s32 i = start; i < s->length; ++i)
+    {
+        if (s->str[i] == thing[0])
+        {
+            s32 j = 1;
+            while(thing[j] && 
+                  s->str[i+j] == thing[j]) 
+            {
+                ++j;
+            }
+            if (!thing[j]) return i;
+        }
+    }
+    return -1;
+}
+
+FUNCTION s32 
+find(const char* s, s32 start, const String* thing)
+{
+    for(s32 i = start; s[i]; ++i)
+    {
+        if (s[i] == thing->str[0])
+        {
+            s32 j = 1;
+            while(j < thing->length && 
+                  s[i+j] == thing->str[j]) 
+            {
+                ++j;
+            }
+            if (j == thing->length) return i;
+        }
+    }
+    return -1;
+}
+
+FUNCTION s32
+find(const char* s, s32 start, const char* thing)
+{
+    for(s32 i = start; s[i]; ++i)
+    {
+        if (s[i] == thing[0])
+        {
+            s32 j = 1;
+            while(thing[j] && 
+                  s[i+j] == thing[j]) 
+            {
+                ++j;
+            }
+            if (!thing[j]) return i;
+        }
+    }
+    return -1;
+}
+
+FUNCTION s32
+find_ignore_case(const String* s, s32 start, char c)
+{
+    if (start >= s->length) return -1;
+    for_str(s->str + start)
+    {
+        if (char_equals_ignore_case(*it, c)) return (s32)(it - s->str);
+    }
+    return -1;
+}
+
+FUNCTION s32
+find_ignore_case(const char* s, s32 start, char c)
+{
+    for_str(s + start)
+    {
+        if (char_equals_ignore_case(*it, c)) return (s32)(it - s);
+    }
+    return -1;
+}
+
+FUNCTION s32 
+find_ignore_case(const String* s, s32 start, const String* thing)
+{
+    if (thing->length > s->length) return -1;
+    s32 seekDist = s->length - thing->length;
+    for(s32 i = start; i < seekDist; ++i)
+    {
+        if (char_equals_ignore_case(s->str[i], thing->str[0]))
+        {
+            s32 j = 1;
+            while(j < thing->length && 
+                  char_equals_ignore_case(s->str[i+j], thing->str[j]))
+            {
+                ++j;
+            }
+            if (j == thing->length) return i;
+        }
+    }
+    return -1;
+}
+
+FUNCTION s32 
+find_ignore_case(const String* s, s32 start, const char* thing)
+{
+    for(s32 i = start; i < s->length; ++i)
+    {
+        if (char_equals_ignore_case(s->str[i], thing[0]))
+        {
+            s32 j = 1;
+            while(thing[j] && 
+                  char_equals_ignore_case(s->str[i+j], thing[j])) 
+            {
+                ++j;
+            }
+            if (!thing[j]) return i;
+        }
+    }
+    return -1;
+}
+
+FUNCTION s32
+find_ignore_case(const char* s, s32 start, const String* thing)
+{
+    for(s32 i = start; s[i]; ++i)
+    {
+        if (char_equals_ignore_case(s[i], thing->str[0]))
+        {
+            s32 j = 1;
+            while(j < thing->length && 
+                  char_equals_ignore_case(s[i+j], thing->str[j]))
+            {
+                ++j;
+            }
+            if (j == thing->length) return i;
+        }
+    }
+    return -1;
+}
+
+FUNCTION s32
+find_ignore_case(const char* s, s32 start, const char* thing)
+{
+    for(s32 i = start; s[i]; ++i)
+    {
+        if (char_equals_ignore_case(s[i], thing[0]))
+        {
+            s32 j = 1;
+            while(thing[j] && 
+                  char_equals_ignore_case(s[i+j], thing[j]))
+            {
+                ++j;
+            }
+            if (!thing[j]) return i;
+        }
+    }
+    return -1;
 }
 
 FUNCTION void           
@@ -1491,45 +1231,154 @@ trim_whitespace(String* string)
 }
 
 FUNCTION s32
-find(const String* s, char c)
+seek_next_char(StringReader* sr, char c)
 {
-    for_str(s->str)
+    if (sr->cursor >= sr->length) return sr->length;
+    s32 findIndex = find(sr->string, sr->cursor, c);
+    if (-1 == findIndex)
     {
-        if (*it == c) return (s32)((u64)it - (u64)s);
+        sr->cursor = sr->length;
+        return sr->length;
     }
-    return -1;
+    sr->cursor = min(findIndex + 1, sr->length); 
+    return findIndex;
 }
 
 FUNCTION s32
-find(const char* s, char c)
+seek_next_string(StringReader* sr, const char* s)
 {
-    for_str(s)
+    if (sr->cursor >= sr->length) return sr->length;
+    s32 seekLength = (s32)strlen(s);
+    s32 findIndex = find(sr->string, sr->cursor, s);
+    if (-1 == findIndex)
     {
-        if (*it == c) return (s32)((u64)it - (u64)s);
+        sr->cursor = sr->length;
+        return sr->length;
     }
-    return -1;
+    sr->cursor = min(findIndex + seekLength, sr->length); 
+    return findIndex;
 }
 
 FUNCTION s32
-find_in_nbytes(const char* s, s32 seekLen, const char* thing, s32 thingLen)
+seek_next_string(StringReader* sr, const String* s)
 {
-    for(s32 i = 0; i < seekLen - thingLen + 1; ++i)
+    if (sr->cursor >= sr->length) return sr->length;
+    s32 seekLength = s->length;
+    s32 findIndex = find(sr->string, sr->cursor, s);
+    if (-1 == findIndex)
     {
-        if (match_nbytes(s + i, thing, thingLen)) return i;
+        sr->cursor = sr->length;
+        return sr->length;
     }
-    return -1;
+    sr->cursor = min(findIndex + seekLength, sr->length); 
+    return findIndex;
 }
 
-FUNCTION s32        
-find_in_nbytes_ignore_case(const char* s, s32 seekLen, const char* thing, s32 thingLen)
+FUNCTION s32
+seek_past_whitespace(StringReader* sr)
 {
-    for(s32 i = 0; i < seekLen - thingLen + 1; ++i)
+    while (sr->cursor < sr->length &&
+           char_is_whitespace(sr->string[sr->cursor]))
     {
-        if (match_nbytes_ignore_case(s + i, thing, thingLen)) return i;
+        sr->cursor++;
     }
-    return -1;
+    return sr->cursor;
 }
 
+FUNCTION s32
+seek_next_whitespace(StringReader* sr)
+{
+    s32 nextCursor = max(0, sr->cursor);
+    while (nextCursor < sr->length && 
+           !char_is_whitespace(sr->string[nextCursor]))
+    {
+        ++nextCursor;
+    }
+    sr->cursor = min(nextCursor + 1, sr->length); 
+    return nextCursor;
+}
+
+FUNCTION s32
+seek_next_alpha(StringReader* sr)
+{
+    s32 nextCursor = max(0, sr->cursor);
+    while (nextCursor < sr->length &&
+           !char_is_alpha(sr->string[nextCursor]))
+    {
+        ++nextCursor;
+    }
+    sr->cursor = min(nextCursor + 1, sr->length);
+    return nextCursor;
+}
+
+FUNCTION s32
+seek_next_number(StringReader* sr)
+{
+    s32 nextCursor = max(0, sr->cursor);
+    while (nextCursor < sr->length &&
+           !char_is_number(sr->string[nextCursor]))
+    {
+        ++nextCursor;
+    }
+    sr->cursor = min(nextCursor + 1, sr->length);
+    return nextCursor;
+}
+
+FUNCTION s32 
+seek_next_alphanumeric(StringReader* sr)
+{
+    s32 nextCursor = max(0, sr->cursor);
+    while (nextCursor < sr->length &&
+           !char_is_alphanumeric(sr->string[nextCursor]))
+    {
+        nextCursor++;
+    }
+    sr->cursor = min(nextCursor + 1, sr->length);
+    return nextCursor;
+}
+
+FUNCTION s32
+seek_next_non_alphanumeric(StringReader* sr)
+{
+    s32 nextCursor = max(0, sr->cursor);
+    while (nextCursor < sr->length &&
+           char_is_alphanumeric(sr->string[nextCursor]))
+    {
+        nextCursor++;
+    }
+    sr->cursor = min(nextCursor + 1, sr->length);
+    return nextCursor;
+}
+
+FUNCTION s32
+seek_next_line(StringReader* sr, NewLineType newLineType)
+{
+    switch (newLineType)
+    {
+        case CARRIAGE_RETURN:
+        {
+            seek_next_char(sr, '\r');
+        } break;
+        
+        case LINE_FEED:
+        {
+            seek_next_char(sr, '\n');
+        } break;
+        
+        case END_OF_LINE:
+        {
+            seek_next_string(sr, "\r\n");
+        } break;
+        
+        default:
+        {
+            assert_msg(0, "Tried seeking a string for a newline character, "
+                       "but asked for an invalid newline type");
+            return -1;
+        } break;
+    }
+    return sr->cursor;
+}
 
 FUNCTION u64 
 parse_u64(const String* s)

@@ -131,7 +131,7 @@ win32_twitch_wait()
     QueryPerformanceCounter(&counterLargeInt);
     s64 crntPerfCounter = counterLargeInt.QuadPart;
     
-    f64 seconds = (f64)crntPerfCounter / perfFrequency;
+    f64 seconds = crntPerfCounter / (f64)perfFrequency;
     
     twitch_wait_to_not_get_banned(seconds);
 }
