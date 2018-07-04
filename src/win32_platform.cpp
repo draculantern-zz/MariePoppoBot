@@ -181,10 +181,6 @@ win32_thread_proc(LPVOID lpParameter)
     Win32ThreadData* threadData = (Win32ThreadData*)lpParameter;
     PlatformWorkQueue* queue = threadData->queue;
     
-    // assert main thread
-    u32 currentThreadID = platform_thread_id();
-    assert(currentThreadID ==  platform_main_thread_id());
-    
     for(;;)
     {
         if (!win32_find_and_do_queue_work(queue))
