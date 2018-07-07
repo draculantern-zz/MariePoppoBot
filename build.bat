@@ -50,7 +50,7 @@ IF "%VCINSTALLDIR%"=="" (
 )
 
 @echo on
-cl %CompilerFlags% ..\src\win32_msvc.c ..\src\win32_twitch_client.cpp /Fe%ExeName% /link %LinkFlags%
+cl %CompilerFlags% ..\src\win32_twitch_client.cpp /Fe%ExeName% /link %LinkFlags%
 
 @echo off
 popd

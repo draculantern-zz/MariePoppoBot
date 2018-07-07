@@ -1,3 +1,4 @@
+#include "win32_msvc.c"
 #include "win32_platform.h"
 #include "win32_twitch_client.h"
 
