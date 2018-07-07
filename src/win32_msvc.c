@@ -103,7 +103,7 @@ extern "C"
     //
     // memset
     //
-#if 0
+	
 #pragma function(memset)
     void* memset(void* dst, int32_t val, size_t numBytes)
     {
@@ -149,12 +149,12 @@ extern "C"
         
         return dst;
     } 
-#endif
+	
     
     //
     // memcpy
     //
-#if 0
+	
 #pragma function(memcpy)
     void* memcpy(void* dst, void const* src, size_t numBytes)
     {
@@ -199,7 +199,7 @@ extern "C"
         }
         return dst;
     }
-#endif /* 0 */
+	
     
     //
     // memmove
