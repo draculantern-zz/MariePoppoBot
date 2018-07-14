@@ -217,8 +217,8 @@ extern "C"
         }
         else
         {
-            char* ptr = (char*)dst + numBytes;
-            char* set = (char*)src + numBytes;
+            char* ptr = (char*)dst + numBytes - 1;
+            char* set = (char*)src + numBytes - 1;
             while(numBytes--)
                 *ptr-- = *set--;
         }
